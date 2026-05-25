@@ -13,6 +13,7 @@ function App() {
   const canvasRef=useRef(null);
   const ctxRef=useRef(null);
   const isDrawingRef=useRef(false);
+  const canvasContRef=useRef('');
   useEffect(() => {
     fetch('http://localhost:3000/api')
     .then((res)=>{
@@ -29,17 +30,25 @@ function App() {
     })
     
     const canvas=canvasRef.current;
-
-    const ratio=window.devicePixelRatio;
-    canvas.width=1000 * ratio;
-    canvas.height=500 * ratio;
-    canvas.style.width=`${1000}px`;
-    canvas.style.height=`${500}px`;
-    
     const ctx=canvas.getContext('2d');
-    ctx.scale(ratio,ratio);
+
+    const resizeCanvas=()=>{
+      const w=canvasContRef.current.clientWidth;
+      const ratio=window.devicePixelRatio;
+      canvas.width= w* ratio;
+      canvas.height=500 * ratio;
+      canvas.style.width=`${w}px`;
+      canvas.style.height=`${500}px`;
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    }
+    resizeCanvas();
+    const observer=new ResizeObserver(() => {
+      resizeCanvas();
+    });
+    observer.observe(canvasContRef.current);
     ctx.strokeStyle = 'black';
     ctx.lineWidth=5;
+    ctx.lineCap="round";
     ctxRef.current=ctx;
     return () => {
     socketRef.current?.disconnect()
@@ -93,6 +102,7 @@ function App() {
   }
   return (
     <>
+    <section className='bg-gray-900 h-screen'>
     <div>
       <div className='flex gap-2'>
         <button className='bg-gray-300 rounded-xs p-1 m-1 hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-300' onClick={()=>{setTool('pencil')}}>pencil</button>
@@ -101,13 +111,20 @@ function App() {
         <button className='bg-gray-300 rounded-xs p-1 m-1 hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-300' onClick={()=>{setTool('line')}}>line</button>
         <button onClick={clearDrawing} className='bg-gray-300 rounded-xs p-1 m-1 hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-300'> Clear </button>
       </div>
-        <div className='flex'>
-          <canvas onMouseDown={startDrawing} onMouseUp={finishDrawing} onMouseMove={draw} ref={canvasRef}></canvas>
+        <div className='grid grid-cols-24 gap-2'>
+          <div className='col-start-2 col-span-3 bg-white'></div>
+          <div className='col-span-15 ' ref={canvasContRef}>
+            <canvas className='bg-white' onMouseDown={startDrawing} onMouseUp={finishDrawing} onMouseMove={draw} ref={canvasRef}></canvas>
+          </div>
+          <div className='bg-white col-span-4'>
+            <div><input type="text" onChange={handleChange} value={mess} className='bg-gray-100 rounded-xl'/></div>
+            <div><button onClick={handleClick} className='bg-amber-200 rounded-lg shadow-xs hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-300'>Click Me</button></div>
+            <div>{value}</div>
+          </div>
         </div>
-          <div><input type="text" onChange={handleChange} value={mess} className='bg-gray-100 rounded-xl'/></div>
-          <div><button onClick={handleClick} className='bg-amber-200 rounded-lg shadow-xs hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-300'>Click Me</button></div>
-          <div>{value}</div>
+          
     </div>
+    </section>
     </>
   )
 }
