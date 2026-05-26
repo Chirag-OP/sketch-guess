@@ -14,6 +14,8 @@ function App() {
   const ctxRef=useRef(null);
   const isDrawingRef=useRef(false);
   const canvasContRef=useRef('');
+  const drawingArr = useRef([]);
+  const redrawRef=useRef('');
   useEffect(() => {
     fetch('http://localhost:3000/api')
     .then((res)=>{
@@ -28,10 +30,36 @@ function App() {
     socketRef.current.on("chat",(arg)=>{
       setValue(arg);
     })
-    
     const canvas=canvasRef.current;
     const ctx=canvas.getContext('2d');
 
+    const redraw=()=>{
+      for(const d of drawingArr.current){
+        const type = d.tool;
+        if(type==='pencil'){
+          ctx.beginPath();
+          ctx.moveTo(d.startX, d.startY);
+          ctx.lineTo(d.finishX,d.finishY);
+          ctx.stroke();
+        }
+        else if(type==='rectangle'){
+          ctx.strokeRect(d.startX,d.startY,d.finishX-d.startX,d.finishY-d.startY);
+        }
+        else if(type==='circle'){
+          const radius=Math.sqrt((d.finishX-d.startX)**2+(d.finishY-d.startY)**2);
+          ctx.beginPath();
+          ctx.arc(d.startX,d.startY,radius,0,Math.PI*2,true);
+          ctx.stroke();
+        }
+        else if(type==='line'){
+          ctx.beginPath();
+          ctx.moveTo(d.startX, d.startY);
+          ctx.lineTo(d.finishX,d.finishY);
+          ctx.stroke();
+        }
+      }
+    }
+    redrawRef.current=redraw;
     const resizeCanvas=()=>{
       const w=canvasContRef.current.clientWidth;
       const ratio=window.devicePixelRatio;
@@ -40,6 +68,7 @@ function App() {
       canvas.style.width=`${w}px`;
       canvas.style.height=`${500}px`;
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      redraw();
     }
     resizeCanvas();
     const observer=new ResizeObserver(() => {
@@ -64,41 +93,89 @@ function App() {
   }
   function startDrawing(e){
     const {offsetX, offsetY}=e.nativeEvent;
-    if(tool && tool!=='pencil' && tool!='line'){
-      xRef.current=offsetX
-      yRef.current=offsetY;
-      return;
-    }
     isDrawingRef.current=true;
-    ctxRef.current.beginPath();
-    ctxRef.current.moveTo(offsetX,offsetY);
+    xRef.current=offsetX
+    yRef.current=offsetY;
+    if(tool==='pencil'){
+      ctxRef.current.beginPath();
+      ctxRef.current.moveTo(offsetX,offsetY);
+    }
   }
   function finishDrawing(e){
     const {offsetX, offsetY}=e.nativeEvent;
     const x=xRef.current;
     const y=yRef.current;
-    if(tool && tool==='rectangle') ctxRef.current.strokeRect(x,y,offsetX-x,offsetY-y);
+    if(tool && tool==='rectangle'){
+      drawingArr.current.push({
+        tool:"rectangle",
+        startX:xRef.current,
+        startY:yRef.current,
+        finishX:offsetX,
+        finishY:offsetY
+      });
+    }
     else if(tool && tool==='circle'){
-      const radius=Math.sqrt((offsetX-x)**2+(offsetY-y)**2);
-      ctxRef.current.beginPath();
-      ctxRef.current.arc(x,y,radius,0,Math.PI*2,true);
-      ctxRef.current.stroke();
+      drawingArr.current.push({
+        tool:"circle",
+        startX:xRef.current,
+        startY:yRef.current,
+        finishX:offsetX,
+        finishY:offsetY
+      });
     }
     else if(tool && tool==='line'){
+      drawingArr.current.push({
+        tool:"line",
+        startX:xRef.current,
+        startY:yRef.current,
+        finishX:offsetX,
+        finishY:offsetY
+      });
+    }
+    isDrawingRef.current=false;
+    redrawRef.current?.();
+  }
+  function draw(e){
+    if(!isDrawingRef.current) return;
+    const {offsetX, offsetY}=e.nativeEvent;
+    if(tool==='pencil'){
+      ctxRef.current.lineTo(offsetX,offsetY);
+      ctxRef.current.stroke();
+      drawingArr.current.push({
+        tool:"pencil",
+        startX:xRef.current,
+        startY:yRef.current,
+        finishX:offsetX,
+        finishY:offsetY
+      });
+      xRef.current=offsetX;
+      yRef.current=offsetY;
+    }
+    else if(tool==='rectangle'){
+      ctxRef.current.clearRect(0,0,1000,500);
+      redrawRef.current?.();
+      ctxRef.current.strokeRect(xRef.current, yRef.current, offsetX-xRef.current, offsetY-yRef.current);
+    }
+    else if(tool==='circle'){
+      ctxRef.current.clearRect(0,0,1000,500);
+      redrawRef.current?.();
+      let radius=Math.sqrt((offsetX-xRef.current)**2+(offsetY-yRef.current)**2);
+      ctxRef.current.beginPath();
+      ctxRef.current.arc(xRef.current,yRef.current,radius,0,Math.PI*2,true);
+      ctxRef.current.stroke();
+    }
+    else if(tool==='line'){
+      ctxRef.current.clearRect(0,0,1000,500);
+      redrawRef.current?.();
+      ctxRef.current.beginPath();
+      ctxRef.current.moveTo(xRef.current,yRef.current);
       ctxRef.current.lineTo(offsetX,offsetY);
       ctxRef.current.stroke();
     }
-    isDrawingRef.current=false;
-  }
-  function draw(e){
-    if(!tool || tool!=='pencil') return;
-    if(!isDrawingRef.current) return;
-    const {offsetX, offsetY}=e.nativeEvent;
-    ctxRef.current.lineTo(offsetX,offsetY);
-    ctxRef.current.stroke();
   }
   function clearDrawing(){
     ctxRef.current.clearRect(0,0,1000,500);
+    drawingArr.current=[];
   }
   return (
     <>
