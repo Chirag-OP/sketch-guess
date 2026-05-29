@@ -16,6 +16,7 @@ function App() {
   const canvasContRef=useRef('');
   const drawingArr = useRef([]);
   const redrawRef=useRef('');
+  const roleRef=useRef(1);
   useEffect(() => {
     fetch('http://localhost:3000/api')
     .then((res)=>{
@@ -24,9 +25,6 @@ function App() {
     .then((data)=>{
     })
     socketRef.current = io('http://localhost:3000')
-    socketRef.current.on("hello",(arg)=>{
-      console.log(arg)
-    })
     socketRef.current.on("chat",(arg)=>{
       setValue(arg);
     })
@@ -34,6 +32,8 @@ function App() {
     const ctx=canvas.getContext('2d');
 
     const redraw=()=>{
+      ctx.strokeStyle='black';
+      ctx.clearRect(0,0,1000,500);
       for(const d of drawingArr.current){
         const type = d.tool;
         if(type==='pencil'){
@@ -57,9 +57,22 @@ function App() {
           ctx.lineTo(d.finishX,d.finishY);
           ctx.stroke();
         }
+        else if(type==='eraser'){
+          ctx.strokeStyle='white';
+          ctx.beginPath();
+          ctx.moveTo(d.startX, d.startY);
+          ctx.lineTo(d.finishX,d.finishY);
+          ctx.stroke();
+          ctx.strokeStyle='black';
+        }
       }
     }
+
     redrawRef.current=redraw;
+    socketRef.current.on("drawing",(arg)=>{
+      drawingArr.current=arg;
+      redraw();
+    })
     const resizeCanvas=()=>{
       const w=canvasContRef.current.clientWidth;
       const ratio=window.devicePixelRatio;
@@ -75,7 +88,6 @@ function App() {
       resizeCanvas();
     });
     observer.observe(canvasContRef.current);
-    ctx.strokeStyle = 'black';
     ctx.lineWidth=5;
     ctx.lineCap="round";
     ctxRef.current=ctx;
@@ -97,6 +109,11 @@ function App() {
     xRef.current=offsetX
     yRef.current=offsetY;
     if(tool==='pencil'){
+      ctxRef.current.beginPath();
+      ctxRef.current.moveTo(offsetX,offsetY);
+    }
+    else if(tool=='eraser'){
+      ctxRef.current.strokeStyle='white'
       ctxRef.current.beginPath();
       ctxRef.current.moveTo(offsetX,offsetY);
     }
@@ -132,6 +149,7 @@ function App() {
         finishY:offsetY
       });
     }
+    if(roleRef.current===1) socketRef.current?.emit("drawing",drawingArr.current);
     isDrawingRef.current=false;
     redrawRef.current?.();
   }
@@ -172,6 +190,19 @@ function App() {
       ctxRef.current.lineTo(offsetX,offsetY);
       ctxRef.current.stroke();
     }
+    else if(tool==='eraser'){
+      ctxRef.current.lineTo(offsetX,offsetY);
+      ctxRef.current.stroke();
+      drawingArr.current.push({
+        tool:"eraser",
+        startX:xRef.current,
+        startY:yRef.current,
+        finishX:offsetX,
+        finishY:offsetY
+      });
+      xRef.current=offsetX;
+      yRef.current=offsetY;
+    }
   }
   function clearDrawing(){
     ctxRef.current.clearRect(0,0,1000,500);
@@ -181,11 +212,12 @@ function App() {
     <>
     <section className='bg-gray-900 h-screen'>
     <div>
-      <div className='flex gap-2'>
+      <div className={`${roleRef.current===0 ? 'opacity-0 pointer-events-none' : ''} flex gap-2`}>
         <button className='bg-gray-300 rounded-xs p-1 m-1 hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-300' onClick={()=>{setTool('pencil')}}>pencil</button>
         <button className='bg-gray-300 rounded-xs p-1 m-1 hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-300' onClick={()=>{setTool('rectangle')}}>rectangle</button>
         <button className='bg-gray-300 rounded-xs p-1 m-1 hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-300' onClick={()=>{setTool('circle')}}>circle</button>
         <button className='bg-gray-300 rounded-xs p-1 m-1 hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-300' onClick={()=>{setTool('line')}}>line</button>
+        <button className='bg-gray-300 rounded-xs p-1 m-1 hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-300' onClick={()=>{setTool('eraser')}}>eraser</button>
         <button onClick={clearDrawing} className='bg-gray-300 rounded-xs p-1 m-1 hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-300'> Clear </button>
       </div>
         <div className='grid grid-cols-24 gap-2'>

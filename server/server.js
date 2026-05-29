@@ -17,9 +17,11 @@ io.on("connection",(socket)=>{
         console.log(arg);
         socket.broadcast.emit("chat",arg);
     })
+    socket.on("drawing",(arg)=>{
+        socket.broadcast.emit("drawing",arg);
+    })
 })
 app.get('/api', (req,res)=>{
-    console.log("hello got a get request here");
     res.send("hello")
 })
 server.listen(3000);
