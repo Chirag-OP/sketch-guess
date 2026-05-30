@@ -2,7 +2,10 @@ import { useState, useEffect, useRef } from 'react'
 import { io } from "socket.io-client";
 import './App.css'
 import { use } from 'react'
-
+import ToolBar from './components/toolBox';
+// linewidth slider update krna hai
+// undo redo buttons and color options
+// for linewidth and color store them in drawing arr
 function App() {
   const [value, setValue] = useState('')
   const [mess, setMess] = useState('');
@@ -17,6 +20,7 @@ function App() {
   const drawingArr = useRef([]);
   const redrawRef=useRef('');
   const roleRef=useRef(1);
+  const lineWidthRef=useRef('5');
   useEffect(() => {
     fetch('http://localhost:3000/api')
     .then((res)=>{
@@ -88,7 +92,7 @@ function App() {
       resizeCanvas();
     });
     observer.observe(canvasContRef.current);
-    ctx.lineWidth=5;
+    ctx.lineWidth=lineWidthRef.current;
     ctx.lineCap="round";
     ctxRef.current=ctx;
     return () => {
@@ -210,16 +214,8 @@ function App() {
   }
   return (
     <>
-    <section className='bg-gray-900 h-screen'>
+    <section className='bg-[#0d0d1a] h-screen'>
     <div>
-      <div className={`${roleRef.current===0 ? 'opacity-0 pointer-events-none' : ''} flex gap-2`}>
-        <button className='bg-gray-300 rounded-xs p-1 m-1 hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-300' onClick={()=>{setTool('pencil')}}>pencil</button>
-        <button className='bg-gray-300 rounded-xs p-1 m-1 hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-300' onClick={()=>{setTool('rectangle')}}>rectangle</button>
-        <button className='bg-gray-300 rounded-xs p-1 m-1 hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-300' onClick={()=>{setTool('circle')}}>circle</button>
-        <button className='bg-gray-300 rounded-xs p-1 m-1 hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-300' onClick={()=>{setTool('line')}}>line</button>
-        <button className='bg-gray-300 rounded-xs p-1 m-1 hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-300' onClick={()=>{setTool('eraser')}}>eraser</button>
-        <button onClick={clearDrawing} className='bg-gray-300 rounded-xs p-1 m-1 hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-300'> Clear </button>
-      </div>
         <div className='grid grid-cols-24 gap-2'>
           <div className='col-start-2 col-span-3 bg-white'></div>
           <div className='col-span-15 ' ref={canvasContRef}>
@@ -231,8 +227,8 @@ function App() {
             <div>{value}</div>
           </div>
         </div>
-          
     </div>
+    <ToolBar setTool={setTool} clearDrawing={clearDrawing} role={roleRef.current} lineWidth={lineWidthRef.current}></ToolBar>
     </section>
     </>
   )
