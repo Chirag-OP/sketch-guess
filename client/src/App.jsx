@@ -13,7 +13,7 @@ function App() {
   
   return (
     <>
-    <section className='bg-[#0d0d1a] h-screen'>
+    <section className='bg-[#0d0d1a] min-h-screen'>
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path='/canvas' element={<CanvasPage></CanvasPage>}></Route>
