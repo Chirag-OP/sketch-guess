@@ -10,13 +10,12 @@ import CanvasPage from './pages/canvasPage';
 // for linewidth and color store them in drawing arr
 // designing landing page
 function App() {
-  
   return (
     <>
     <section className='bg-[#0d0d1a] min-h-screen'>
     <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path='/canvas' element={<CanvasPage></CanvasPage>}></Route>
+      <Route path="/" element={<LandingPage/>} />
+      <Route path='/canvas/:roomID' element={<CanvasPage></CanvasPage>}></Route>
     </Routes>
      </section>
     </>

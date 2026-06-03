@@ -29,18 +29,34 @@ A real-time collaborative drawing application that allows multiple users to draw
 - showing joined users
 - guarented delivery from server to client using database
 
+## Design Decisions and their Reasons
+
+### Why Nanoid for Unique Room ID generation?
+**Initial approach:** Generate an ID by hashing a combination of 
+username + timestamp with a secret key.
+
+**Problem:** these type of hashes produce long outputs (32-64 chars) and
+truncating to make them shareable increases collision probability 
+significantly.
+
+**Decision:** so i decided to use Nanoid since its specifically designed to produce short unique IDs with minimal chance of collision
+
+
 ##  Technical Challenges Faced and Solutions
 
 ### Live Preview
 
-#### Problem:
-    If shapes are made along with user mouse movement then instead of only drawing completed shape, multiple copies of shapes are made along the way.
-#### Solution - used an array
-    At the end when user releases the mouse final shape is stored in array. Then whole canvas is then cleared and shapes from array are redrawn.
+**Problem:**
+If shapes are made along with user mouse movement then instead of only drawing completed shape, multiple copies of shapes are made along the way.
 
-#### Canvas Sizing
+**Solution:** I used an array.
+At the end when user releases the mouse final shape is stored in array. Then whole canvas is then cleared and shapes from array are redrawn.
 
-#### Problem:
-    Canvas element uses a fixed width and height. As a result the drawing area did not adapt correctly to different screen sizes or window resizes, leading to layout and responsiveness issues.
-#### Solution 
-    Added an observer to container of canvas to observe change in size. whenever change is detected, canvas size is adjusted accordingly to always fit its parent container making it responsive. Also since it erases all drawings due to change in size, all drawings are redrawn from array mentioned in live preview problem.
+### Canvas Sizing
+
+**Problem:**
+Canvas element uses a fixed width and height. As a result the drawing area did not adapt correctly to different screen sizes or window resizes, leading to layout and responsiveness issues.
+
+**Solution:**
+Added an observer to container of canvas to observe change in size. whenever change is detected, canvas size is adjusted accordingly to always fit its parent container making it responsive. Also since it erases all drawings due to change in size, all drawings are redrawn from array mentioned in live preview problem.
+

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { io } from "socket.io-client";
 import ToolBar from '../components/toolBox';
-
+import { useLocation } from 'react-router-dom';
 function CanvasPage(){
     const [value, setValue] = useState('')
   const [mess, setMess] = useState('');
@@ -17,6 +17,8 @@ function CanvasPage(){
   const redrawRef=useRef('');
   const roleRef=useRef(1);
   const lineWidthRef=useRef('5');
+  const location = useLocation();
+  const [userName, setUserName] = useState('');
   useEffect(() => {
     fetch('http://localhost:3000/api')
     .then((res)=>{
@@ -28,6 +30,7 @@ function CanvasPage(){
     socketRef.current.on("chat",(arg)=>{
       setValue(arg);
     })
+    setUserName(location.state?.userName);
     const canvas=canvasRef.current;
     const ctx=canvas.getContext('2d');
 
@@ -220,6 +223,7 @@ function CanvasPage(){
             <div className='bg-white col-span-4'>
               <div><input type="text" onChange={handleChange} value={mess} className='bg-gray-100 rounded-xl'/></div>
               <div><button onClick={handleClick} className='bg-amber-200 rounded-lg shadow-xs hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-300'>Click Me</button></div>
+              <div>{userName}</div>
               <div>{value}</div>
             </div>
           </div>

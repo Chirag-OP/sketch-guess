@@ -1,14 +1,52 @@
-import { Link } from "react-router-dom";
+import { Link , useNavigate, useParams} from "react-router-dom";
 import { useEffect, useState } from "react";
 import { nanoid } from "nanoid";
-import { useNavigate } from "react-router-dom";
 
 // use useNavigate instead of link to create room first before going to next page
+// write logic to check if room code exists or not and update it in handleJoinRoom
+// if someone directly uses share link no username appears=>
+    // try adding some default names or from browser or from past user login etc
 function LandingPage(){
     const [createRoom,setCreateRoom]=useState(false);
     const [players, setPlayers] = useState(5);
     const [drawTime, setDrawTime] = useState(60);
     const [rounds,setRounds] = useState(3);
+    const [userName,setUserName]=useState('');
+    const [joinCode, setJoinCode] = useState('');
+    const navigate=useNavigate();
+    function handleRoomCreate(){
+        if(userName.length==0){
+            alert('Invalid Username');
+            return;
+        }
+        let roomID = nanoid(8);
+        roomID = roomID.toUpperCase();
+        setTimeout(() => {
+            console.log('Creating...');
+            navigate(`/canvas/${roomID}`,{
+                state:{
+                    userName:userName,
+                    isHost:true
+                }
+            });
+        }, 1000);
+        
+    }
+    function handleJoinRoom(){
+        if(joinCode.length!==8){
+            alert('Invalid Room Code');
+            return;
+        }
+        setTimeout(() => {
+            console.log('Joining...');
+            navigate(`/canvas/${joinCode}`,{
+                state:{
+                    userName:userName,
+                    isHost:false
+                }
+            });
+        }, 500);
+    }
     return(
         <div className=" flex flex-col min-h-screen">
             <div className="bg-[#1a1a2e] flex text-3xl p-4 border-b border-violet-600 font-['Press_Start_2P'] text-orange-500"><div className="text-violet-600">Sketch</div>Guess</div>
@@ -19,9 +57,9 @@ function LandingPage(){
                 <div className="flex flex-col gap-2 m-4 p-4 w-xl items-center">
                     <div className="p-1 ">
                         <div className="text-gray-400 text-xs">YOUR NAME *</div>
-                        <input type="text" id='name' className="bg-gray-600 w-56 rounded-lg text-gray-200" placeholder="Enter Your Name"/>
+                        <input type="text" id='name' className="bg-gray-600 w-56 rounded-lg text-gray-200" placeholder="Enter Your Name" onChange={(e)=>setUserName(e.target.value)}/>
                     </div>
-                    {!createRoom && <div className="p-1"><input type="text" id='joinCode' className="bg-gray-600 rounded-lg w-56 text-gray-200" placeholder="Enter Room Code"/></div>}
+                    {!createRoom && <div className="p-1"><input type="text" id='joinCode' className="bg-gray-600 rounded-lg w-56 text-gray-200" placeholder="Enter Room Code" onChange={(e)=>setJoinCode(e.target.value)}/></div>}
                     {createRoom && (
                         <div className="flex flex-col gap-2">
                             <div>
@@ -67,8 +105,8 @@ function LandingPage(){
                         </div>
                         </div>
                     )}
-                    <div className="p-1 flex gap-2 w-56"><button className="border border-white rounded-lg text-white flex-1" onClick={()=>{setCreateRoom(prev=>!prev)}}>Create Room</button>{createRoom ? <Link to='/canvas' className="flex-1"><button className="border border-white rounded-lg text-white w-full">Create</button></Link> 
-                        : <Link to='/canvas' className="flex-1"><button className="border border-white rounded-lg text-white w-full">Join Room</button></Link>
+                    <div className="p-1 flex gap-2 w-56"><button className="border border-white rounded-lg text-white flex-1" onClick={()=>{setCreateRoom(prev=>!prev)}}>Create Room</button>{createRoom ? <button className="border border-white rounded-lg text-white w-full flex-1" onClick={handleRoomCreate}>Create</button> 
+                        : <button className="flex-1 border border-white rounded-lg text-white w-full" onClick={handleJoinRoom}>Join Room</button>
                     }</div>
                 </div>
             </div>
