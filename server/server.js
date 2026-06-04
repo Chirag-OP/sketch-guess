@@ -13,12 +13,16 @@ const io = new Server(server,{
     }
 })
 io.on("connection",(socket)=>{
+    socket.on("join_room",({roomID,userName,isHost})=>{
+        socket.join(roomID);
+        socket.data.roomID=roomID;
+    })
     socket.on("chat",(arg)=>{
         console.log(arg);
-        socket.broadcast.emit("chat",arg);
+        socket.to(socket.data.roomID).emit("chat",arg);
     })
     socket.on("drawing",(arg)=>{
-        socket.broadcast.emit("drawing",arg);
+        socket.to(socket.data.roomID).emit("drawing",arg);
     })
 })
 app.get('/api', (req,res)=>{

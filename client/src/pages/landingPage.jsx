@@ -1,11 +1,12 @@
 import { Link , useNavigate, useParams} from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
 
-// use useNavigate instead of link to create room first before going to next page
 // write logic to check if room code exists or not and update it in handleJoinRoom
 // if someone directly uses share link no username appears=>
-    // try adding some default names or from browser or from past user login etc
+// try adding some default names or from browser or from past user login etc
+// and on join request on roomID, do a get or post request to check if roomID exists
+// add password on join or host recieves request so he can accept or reject
 function LandingPage(){
     const [createRoom,setCreateRoom]=useState(false);
     const [players, setPlayers] = useState(5);
@@ -14,12 +15,16 @@ function LandingPage(){
     const [userName,setUserName]=useState('');
     const [joinCode, setJoinCode] = useState('');
     const navigate=useNavigate();
+    const [joining,setJoining]= useState(false);
     function handleRoomCreate(){
+        if(joining) return;
         if(userName.length==0){
             alert('Invalid Username');
             return;
         }
-        let roomID = nanoid(8);
+        setJoining(true);
+        let roomID;
+        roomID = nanoid(8);
         roomID = roomID.toUpperCase();
         setTimeout(() => {
             console.log('Creating...');
@@ -29,14 +34,20 @@ function LandingPage(){
                     isHost:true
                 }
             });
+            setJoining(false);
         }, 1000);
-        
     }
     function handleJoinRoom(){
+        if(joining) return;
+        if(userName.length==0){
+            alert('Invalid Username');
+            return;
+        }
         if(joinCode.length!==8){
             alert('Invalid Room Code');
             return;
         }
+        setJoining(true);
         setTimeout(() => {
             console.log('Joining...');
             navigate(`/canvas/${joinCode}`,{
@@ -45,6 +56,7 @@ function LandingPage(){
                     isHost:false
                 }
             });
+            setJoining(false);
         }, 500);
     }
     return(

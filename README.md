@@ -37,9 +37,9 @@ username + timestamp with a secret key.
 
 **Problem:** these type of hashes produce long outputs (32-64 chars) and
 truncating to make them shareable increases collision probability 
-significantly.
+significantly. Since each digit can be hexadecimal i.e 0-9 or a-f i.e 16 values
 
-**Decision:** so i decided to use Nanoid since its specifically designed to produce short unique IDs with minimal chance of collision
+**Decision:** so i decided to use Nanoid since its specifically designed to produce short unique IDs with minimal chance of collision. Since Its default alphabet contains 64 URL-safe characters
 
 
 ##  Technical Challenges Faced and Solutions

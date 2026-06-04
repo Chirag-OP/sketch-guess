@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { io } from "socket.io-client";
 import ToolBar from '../components/toolBox';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 function CanvasPage(){
-    const [value, setValue] = useState('')
+  const [value, setValue] = useState('')
   const [mess, setMess] = useState('');
   const socketRef = useRef(null);
   const [tool,setTool] = useState('');
@@ -18,7 +18,10 @@ function CanvasPage(){
   const roleRef=useRef(1);
   const lineWidthRef=useRef('5');
   const location = useLocation();
+  const {roomID}=useParams();
   const [userName, setUserName] = useState('');
+  const [isHost,setIsHost]=useState(false);
+  const roomIDRef=useRef('');
   useEffect(() => {
     fetch('http://localhost:3000/api')
     .then((res)=>{
@@ -31,6 +34,9 @@ function CanvasPage(){
       setValue(arg);
     })
     setUserName(location.state?.userName);
+    setIsHost(location.state?.isHost);
+    roomIDRef.current=roomID;
+    socketRef.current.emit("join_room",{roomID,userName,isHost});
     const canvas=canvasRef.current;
     const ctx=canvas.getContext('2d');
 
@@ -210,6 +216,7 @@ function CanvasPage(){
   function clearDrawing(){
     ctxRef.current.clearRect(0,0,1000,500);
     drawingArr.current=[];
+    if(roleRef.current===1) socketRef.current?.emit("drawing",drawingArr.current);
   }
     return(
         <div>
@@ -224,6 +231,7 @@ function CanvasPage(){
               <div><input type="text" onChange={handleChange} value={mess} className='bg-gray-100 rounded-xl'/></div>
               <div><button onClick={handleClick} className='bg-amber-200 rounded-lg shadow-xs hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-300'>Click Me</button></div>
               <div>{userName}</div>
+              <div>{roomIDRef.current}</div>
               <div>{value}</div>
             </div>
           </div>
