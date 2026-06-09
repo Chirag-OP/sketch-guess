@@ -15,13 +15,18 @@ function CanvasPage(){
   const canvasContRef=useRef('');
   const drawingArr = useRef([]);
   const redrawRef=useRef('');
-  const roleRef=useRef(1);
   const lineWidthRef=useRef('5');
   const location = useLocation();
   const {roomID}=useParams();
   const [userName, setUserName] = useState('');
   const [isHost,setIsHost]=useState(false);
+  const [isDrawing, setIsDrawing]= useState(false);
+  const [hasGuessed, setHasGuessed]=useState(false);
+  const [score,setScore]=useState(0);
   const roomIDRef=useRef('');
+  const roleRef=useRef(1);
+  let playerID= localStorage.getItem('playerID');
+  const playerList = useRef(new Map());
   useEffect(() => {
     fetch('http://localhost:3000/api')
     .then((res)=>{
@@ -33,10 +38,26 @@ function CanvasPage(){
     socketRef.current.on("chat",(arg)=>{
       setValue(arg);
     })
-    setUserName(location.state?.userName);
-    setIsHost(location.state?.isHost);
+    if(!playerID){
+      const pID = crypto.randomUUID();
+      localStorage.setItem('playerId',pID);
+      playerID=pID;
+    }
+    let user=location.state?.userName;
+    let host=location.state?.isHost;
+    if(playerList.current.has(playerID)){
+      user = playerList.current.get(playerID).userName;
+      host = playerList.current.get(playerID).isHost;
+    }
+    setUserName(user);
+    setIsHost(host);
+    // update the logic to get server to verify the username and ishost
     roomIDRef.current=roomID;
-    socketRef.current.emit("join_room",{roomID,userName,isHost});
+    socketRef.current.emit("join_room",{playerID,roomID,userName,isHost,isDrawing,score,hasGuessed});
+    socketRef.current.on("player_list",(arg)=>{
+      playerList.current.set(arg[0][0],arg[0][1]);
+      console.log(arg);
+    })
     const canvas=canvasRef.current;
     const ctx=canvas.getContext('2d');
 

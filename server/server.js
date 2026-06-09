@@ -12,10 +12,28 @@ const io = new Server(server,{
         methods: ['GET','POST']
     }
 })
+class PlayerData{
+    constructor(name,score,isHost,isDrawing,joinTime,hasGuessed){
+        this.name=name;
+        this.score=score;
+        this.isHost=isHost;
+        this.isDrawing=isDrawing;
+        this.joinTime=joinTime;
+        this.hasGuessed=hasGuessed
+    }
+}
+const scoreTable = new Map();
 io.on("connection",(socket)=>{
-    socket.on("join_room",({roomID,userName,isHost})=>{
+    socket.on("join_room",({playerID,roomID,userName,isHost,isDrawing,score,hasGuessed})=>{
         socket.join(roomID);
         socket.data.roomID=roomID;
+        if(!scoreTable.has(roomID)){
+            const mp=new Map();
+            mp.set(playerID, new PlayerData(userName,0,isHost,isDrawing,Date.now(),hasGuessed));
+            scoreTable.set(roomID,mp);
+        }
+        else scoreTable.get(roomID).set(playerID , new PlayerData(userName,0,isHost,isDrawing,Date.now(),hasGuessed));
+        io.to(socket.data.roomID).emit("player_list",Array.from(scoreTable.get(roomID).entries()));
     })
     socket.on("chat",(arg)=>{
         console.log(arg);

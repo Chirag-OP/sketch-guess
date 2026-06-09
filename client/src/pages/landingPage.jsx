@@ -7,6 +7,7 @@ import { nanoid } from "nanoid";
 // try adding some default names or from browser or from past user login etc
 // and on join request on roomID, do a get or post request to check if roomID exists
 // add password on join or host recieves request so he can accept or reject
+// for reconnection logic i can add JWT to map persons previous socket id and assign his previous score to him on reconnect
 function LandingPage(){
     const [createRoom,setCreateRoom]=useState(false);
     const [players, setPlayers] = useState(5);
