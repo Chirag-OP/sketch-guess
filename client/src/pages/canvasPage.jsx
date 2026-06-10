@@ -2,6 +2,10 @@ import { useState, useEffect, useRef } from 'react'
 import { io } from "socket.io-client";
 import ToolBar from '../components/toolBox';
 import { useLocation, useParams } from 'react-router-dom';
+import PlayerCard from '../components/playerCard';
+// on reload copy of same player is added again
+// add style on button hover
+// add name while sending chat
 function CanvasPage(){
   const [value, setValue] = useState('')
   const [mess, setMess] = useState('');
@@ -25,8 +29,10 @@ function CanvasPage(){
   const [score,setScore]=useState(0);
   const roomIDRef=useRef('');
   const roleRef=useRef(1);
-  let playerID= localStorage.getItem('playerID');
-  const playerList = useRef(new Map());
+  // let playerID= localStorage.getItem('playerID');
+  const [playerList,setPlayerList] = useState(new Map());
+  const [startGame, setStartGame] = useState(false);
+  const [messArr,setMessArr] = useState([]);
   useEffect(() => {
     fetch('http://localhost:3000/api')
     .then((res)=>{
@@ -36,31 +42,43 @@ function CanvasPage(){
     })
     socketRef.current = io('http://localhost:3000')
     socketRef.current.on("chat",(arg)=>{
-      setValue(arg);
+      setValue(arg.mess);
+      const arr = messArr;
+      arr.push({message:arg.mess,
+        name:arg.userName,
+        isMess:true,
+        isMine:false
+      });
+      setMessArr(arr);
     })
-    if(!playerID){
-      const pID = crypto.randomUUID();
-      localStorage.setItem('playerId',pID);
-      playerID=pID;
-    }
-    let user=location.state?.userName;
+    // if(!playerID){
+    //   const pID = crypto.randomUUID();
+    //   localStorage.setItem('playerID',pID);
+    //   playerID=pID;
+    // }
+    const playerID = crypto.randomUUID();
+    let user= location.state?.userName;
     let host=location.state?.isHost;
-    if(playerList.current.has(playerID)){
-      user = playerList.current.get(playerID).userName;
-      host = playerList.current.get(playerID).isHost;
-    }
+    let joinTime = location.state?.joinTime;
+    // if(playerList.has(playerID)){
+    //   user = playerList.get(playerID).userName;
+    //   host = playerList.get(playerID).isHost;
+    //   joinTime = playerList.get(playerID).joinTime;
+    // }
     setUserName(user);
     setIsHost(host);
+    console.log(user);
+    console.log(host);
     // update the logic to get server to verify the username and ishost
     roomIDRef.current=roomID;
-    socketRef.current.emit("join_room",{playerID,roomID,userName,isHost,isDrawing,score,hasGuessed});
+    socketRef.current.emit("join_room",{playerID,roomID,user,host,isDrawing,score,hasGuessed,joinTime});
     socketRef.current.on("player_list",(arg)=>{
-      playerList.current.set(arg[0][0],arg[0][1]);
       console.log(arg);
+      setPlayerList(new Map(arg))
+      
     })
     const canvas=canvasRef.current;
     const ctx=canvas.getContext('2d');
-
     const redraw=()=>{
       ctx.strokeStyle='black';
       ctx.clearRect(0,0,1000,500);
@@ -126,12 +144,19 @@ function CanvasPage(){
   }
   }, [])
   function handleClick(){
-    socketRef.current?.emit("chat",mess);
+    socketRef.current?.emit("chat",{mess,userName});
+    const arr = messArr;
+      arr.push({message:mess,
+        name:userName,
+        isMess:true,
+        isMine:true
+      });
+    setMessArr(arr);
     setValue(null);
     setMess('');
   }
   function handleChange(e){
-    setMess(e.target.value)
+    setMess(e.target.value);
   }
   function startDrawing(e){
     const {offsetX, offsetY}=e.nativeEvent;
@@ -244,20 +269,24 @@ function CanvasPage(){
           <div className="bg-[#1a1a2e] flex text-3xl p-4 border-b border-violet-600 font-['Press_Start_2P'] text-orange-500"><div className="text-violet-600">Sketch</div>Guess</div>
         <div className='pt-4'>
           <div className='grid grid-cols-24 gap-2'>
-            <div className='col-start-2 col-span-3 bg-white'></div>
+            <div className='col-start-2 col-span-3 gap-2 flex flex-col'>
+              {[...playerList.entries()].map(([Id,player])=>(
+                <PlayerCard key={Id} name={player.userName} isHost={player.isHost} isDrawing={player.isDrawing} score={player.score}></PlayerCard>
+              ))}
+            </div>
             <div className='col-span-15 ' ref={canvasContRef}>
               <canvas className='bg-white' onMouseDown={startDrawing} onMouseUp={finishDrawing} onMouseMove={draw} ref={canvasRef}></canvas>
+              {!startGame && <div className='w-full'><button onClick={()=>{setStartGame(true)}} className="border border-white rounded-lg text-white w-full mt-1">Start</button></div>}
             </div>
-            <div className='bg-white col-span-4'>
-              <div><input type="text" onChange={handleChange} value={mess} className='bg-gray-100 rounded-xl'/></div>
-              <div><button onClick={handleClick} className='bg-amber-200 rounded-lg shadow-xs hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-300'>Click Me</button></div>
-              <div>{userName}</div>
-              <div>{roomIDRef.current}</div>
-              <div>{value}</div>
+            <div className=' col-span-4 flex flex-col justify-end p-1'>
+              {messArr.map((i,idx)=>(
+                <div className={`rounded-lg p-1 break-all w-[80%] text-gray-200 ${i.isMine ? '' : ''}` } key={idx}><div></div>{i.name}: {i.message}</div>
+              ))}
+              <div className=''><input type="text" onChange={handleChange} value={mess} className='bg-gray-200 rounded-xl m-1'/><button onClick={handleClick} className='border border-white text-white p-2 rounded-lg shadow-xs hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-300'>S</button></div>
             </div>
           </div>
       </div>
-      <ToolBar setTool={setTool} clearDrawing={clearDrawing} role={roleRef.current} lineWidth={lineWidthRef.current}></ToolBar>
+      {startGame && <ToolBar setTool={setTool} clearDrawing={clearDrawing} role={roleRef.current} lineWidth={lineWidthRef.current}></ToolBar>}
       </div>
     )
 }

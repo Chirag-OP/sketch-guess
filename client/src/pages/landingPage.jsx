@@ -32,7 +32,8 @@ function LandingPage(){
             navigate(`/canvas/${roomID}`,{
                 state:{
                     userName:userName,
-                    isHost:true
+                    isHost:true,
+                    joinTime: Date.now()
                 }
             });
             setJoining(false);
@@ -54,7 +55,8 @@ function LandingPage(){
             navigate(`/canvas/${joinCode}`,{
                 state:{
                     userName:userName,
-                    isHost:false
+                    isHost:false,
+                    joinTime:Date.now()
                 }
             });
             setJoining(false);

@@ -41,6 +41,12 @@ significantly. Since each digit can be hexadecimal i.e 0-9 or a-f i.e 16 values
 
 **Decision:** so i decided to use Nanoid since its specifically designed to produce short unique IDs with minimal chance of collision. Since Its default alphabet contains 64 URL-safe characters
 
+#### Using Local storage
+**Initial approach:** use local storage to store playerID to prevent score loss on reconnection
+
+**Problem:** But this give rise to another Problem of overWriting player details if that same player rejoins from same browser using different name. Also to prevent this if i tend to store username in url parameter then link won't be shareable
+
+**Decision:**
 
 ##  Technical Challenges Faced and Solutions
 
@@ -60,3 +66,9 @@ Canvas element uses a fixed width and height. As a result the drawing area did n
 **Solution:**
 Added an observer to container of canvas to observe change in size. whenever change is detected, canvas size is adjusted accordingly to always fit its parent container making it responsive. Also since it erases all drawings due to change in size, all drawings are redrawn from array mentioned in live preview problem.
 
+### Player Data storage on Frontend
+**Problem:**
+I originally used UseRef to store player data in a map.But since useRef doesn't trigger rerender any new players joined won't show up in playerList
+
+**Solution:**
+I swtiched to using UseState but since a map declared as useState doesn't allow direct insertion of element, so during SetPlayerList i declare a new map same as my previous map and then appned new player Data in it and return the new map
