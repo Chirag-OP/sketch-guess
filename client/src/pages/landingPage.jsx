@@ -1,7 +1,7 @@
 import { Link , useNavigate, useParams} from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
-
+import { io } from "socket.io-client";
 // write logic to check if room code exists or not and update it in handleJoinRoom
 // if someone directly uses share link no username appears=>
 // try adding some default names or from browser or from past user login etc
@@ -17,6 +17,8 @@ function LandingPage(){
     const [joinCode, setJoinCode] = useState('');
     const navigate=useNavigate();
     const [joining,setJoining]= useState(false);
+    const socket = io('http://localhost:3000');
+    const gameState = 'Not Started';
     function handleRoomCreate(){
         if(joining) return;
         if(userName.length==0){
@@ -27,6 +29,7 @@ function LandingPage(){
         let roomID;
         roomID = nanoid(8);
         roomID = roomID.toUpperCase();
+        socket.emit('round_info', ({roomID,rounds,drawTime,players,gameState}));
         setTimeout(() => {
             console.log('Creating...');
             navigate(`/canvas/${roomID}`,{
@@ -63,7 +66,7 @@ function LandingPage(){
         }, 500);
     }
     return(
-        <div className=" flex flex-col min-h-screen">
+        <div className=" flex flex-col min-h-screen ">
             <div className="bg-[#1a1a2e] flex text-3xl p-4 border-b border-violet-600 font-['Press_Start_2P'] text-orange-500"><div className="text-violet-600">Sketch</div>Guess</div>
             <div className="w-full h-full flex flex-col items-center justify-center m-4 mb-8">
                 <div className="font-['Press_Start_2P'] text-gray-300 text-2xl p-2 mt-4">Draw.    Guess.</div>
@@ -74,7 +77,10 @@ function LandingPage(){
                         <div className="text-gray-400 text-xs">YOUR NAME *</div>
                         <input type="text" id='name' className="bg-gray-600 w-56 rounded-lg text-gray-200" placeholder="Enter Your Name" onChange={(e)=>setUserName(e.target.value)}/>
                     </div>
-                    {!createRoom && <div className="p-1"><input type="text" id='joinCode' className="bg-gray-600 rounded-lg w-56 text-gray-200" placeholder="Enter Room Code" onChange={(e)=>setJoinCode(e.target.value)}/></div>}
+                    {!createRoom && <div className="mb-1">
+                        <div className="text-gray-400 text-xs">JOIN CODE *</div>
+                        <input type="text" id='joinCode' className="bg-gray-600 rounded-lg w-56 text-gray-200" placeholder="Enter Room Code" onChange={(e)=>setJoinCode(e.target.value)}/>
+                        </div>}
                     {createRoom && (
                         <div className="flex flex-col gap-2">
                             <div>

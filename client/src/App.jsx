@@ -12,7 +12,7 @@ import CanvasPage from './pages/canvasPage';
 function App() {
   return (
     <>
-    <section className='bg-[#0d0d1a] min-h-screen'>
+    <section className="bg-[#0d0d1a] min-h-screen font-['Exo_2'] ">
     <Routes>
       <Route path="/" element={<LandingPage/>} />
       <Route path='/canvas/:roomID' element={<CanvasPage></CanvasPage>}></Route>

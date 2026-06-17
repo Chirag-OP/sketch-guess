@@ -71,4 +71,4 @@ Added an observer to container of canvas to observe change in size. whenever cha
 I originally used UseRef to store player data in a map.But since useRef doesn't trigger rerender any new players joined won't show up in playerList
 
 **Solution:**
-I swtiched to using UseState but since a map declared as useState doesn't allow direct insertion of element, so during SetPlayerList i declare a new map same as my previous map and then appned new player Data in it and return the new map
+I swtiched to using UseState but since a map declared as useState doesn't allow direct insertion of element, so during SetPlayerList i declare a new map same as my previous map and then append new player Data in it and return the new map

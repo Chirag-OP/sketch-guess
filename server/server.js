@@ -12,6 +12,28 @@ const io = new Server(server,{
         methods: ['GET','POST']
     }
 })
+const words = [
+  "Apple",
+  "House",
+  "Car",
+  "Tree",
+  "Bicycle",
+  "Cat",
+  "Dog",
+  "Book",
+  "Chair",
+  "Pizza",
+  "Airplane",
+  "Mountain",
+  "Sunflower",
+  "Guitar",
+  "Rocket",
+  "Castle",
+  "Umbrella",
+  "Dinosaur",
+  "Treasure",
+  "Robot"
+];
 class PlayerData{
     constructor(userName,score,isHost,isDrawing,joinTime,hasGuessed){
         this.userName=userName;
@@ -22,7 +44,16 @@ class PlayerData{
         this.hasGuessed=hasGuessed
     }
 }
+class RoundInfo{
+    constructor(roundNo,drawTime,maxPlayers,gameState){
+        this.roundNo = roundNo;
+        this.drawTime = drawTime;
+        this.maxPlayers = maxPlayers;
+        this.gameState = gameState;
+    }
+}
 const scoreTable = new Map();
+const roundInfoMap = new Map();
 io.on("connection",(socket)=>{
     socket.on("join_room",({playerID,roomID,user,host,isDrawing,score,hasGuessed,joinTime})=>{
         socket.join(roomID);
@@ -42,7 +73,14 @@ io.on("connection",(socket)=>{
         socket.to(socket.data.roomID).emit("chat",arg);
     })
     socket.on("drawing",(arg)=>{
-        socket.to(socket.data.roomID).emit("drawing",arg);
+        io.to(socket.data.roomID).emit("drawing",arg);
+    })
+    socket.on('round_info', ({roomID,rounds,drawTime,players,gameState})=>{
+        roundInfoMap.set(roomID,new RoundInfo(rounds,drawTime,players,gameState));
+        console.log(roomID,rounds,drawTime,players,gameState)
+    })
+    socket.on('round_info_req',(arg)=>{
+        io.to(arg).emit('update_round_info', roundInfoMap.get(arg));
     })
 })
 app.get('/api', (req,res)=>{
