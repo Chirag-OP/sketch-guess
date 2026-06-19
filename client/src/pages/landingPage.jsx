@@ -2,7 +2,7 @@ import { Link , useNavigate, useParams} from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
 import { io } from "socket.io-client";
-// write logic to check if room code exists or not and update it in handleJoinRoom
+// need to add the check for join success before storing inside session storage
 // if someone directly uses share link no username appears=>
 // try adding some default names or from browser or from past user login etc
 // and on join request on roomID, do a get or post request to check if roomID exists
@@ -29,16 +29,19 @@ function LandingPage(){
         let roomID;
         roomID = nanoid(8);
         roomID = roomID.toUpperCase();
+        const playerID = crypto.randomUUID();
+        socket.emit('add_player',{playerID,roomID,userName,
+            isHost: true,
+            isDrawing: false,
+            score:0 ,
+            hasGuessed:false,
+            joinTime:Date.now()
+        });
+        sessionStorage.setItem(roomID,playerID);
         socket.emit('round_info', ({roomID,rounds,drawTime,players,gameState}));
         setTimeout(() => {
             console.log('Creating...');
-            navigate(`/canvas/${roomID}`,{
-                state:{
-                    userName:userName,
-                    isHost:true,
-                    joinTime: Date.now()
-                }
-            });
+            navigate(`/canvas/${roomID}`);
             setJoining(false);
         }, 1000);
     }
@@ -53,15 +56,18 @@ function LandingPage(){
             return;
         }
         setJoining(true);
+        const playerID = crypto.randomUUID();
+        socket.emit('add_player',{playerID,roomID:joinCode,userName,
+            isHost: false,
+            isDrawing: false,
+            score:0 ,
+            hasGuessed:false,
+            joinTime:Date.now()
+        });
+        sessionStorage.setItem(joinCode,playerID);
         setTimeout(() => {
             console.log('Joining...');
-            navigate(`/canvas/${joinCode}`,{
-                state:{
-                    userName:userName,
-                    isHost:false,
-                    joinTime:Date.now()
-                }
-            });
+            navigate(`/canvas/${joinCode}`);
             setJoining(false);
         }, 500);
     }

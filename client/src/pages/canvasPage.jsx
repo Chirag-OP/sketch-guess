@@ -5,9 +5,10 @@ import { useLocation, useParams } from 'react-router-dom';
 import PlayerCard from '../components/playerCard';
 import ToolBar from '../components/toolBox';
 import send_sym from '../assets/send.svg'
-// on reload copy of same player is added again
+
 // add style on button hover
 // add animation on waiting for Players section
+// redirect players using joinLink to landing page with joinCode autoFilled
 
 function CanvasPage(){
   const [value, setValue] = useState('')
@@ -25,7 +26,6 @@ function CanvasPage(){
   const [score,setScore]=useState(0);
   const roomIDRef=useRef('');
   const roleRef=useRef(1);
-  // let playerID= localStorage.getItem('playerID');
   const [playerList,setPlayerList] = useState(new Map());
   const [startGame, setStartGame] = useState(false);
   const [messArr,setMessArr] = useState([]);
@@ -34,14 +34,22 @@ function CanvasPage(){
   const [round , setRound] = useState(9);
   const drawTimeRef = useRef(90);
   const maxPlayersRef =  useRef(10);
+  
+  const playerID = sessionStorage.getItem(roomID);
   useEffect(() => {
-    fetch('http://localhost:3000/api')
-    .then((res)=>{
-      return res.text();
-    })
-    .then((data)=>{
-    })
     socketRef.current = io('http://localhost:3000')
+    socketRef.current.emit('join_room',roomID);
+    socketRef.current.on("player_list",(arg)=>{
+      console.log(arg);
+      const pMap = new Map(arg);
+      setPlayerList(pMap);
+      const playerData = pMap.get(playerID);
+      setUserName(playerData.userName);
+      setIsHost(playerData.isHost);
+      setScore(playerData.score);
+      setIsDrawing(playerData.isDrawing);
+      setHasGuessed(playerData.hasGuessed);
+    })
     socketRef.current.on("chat",(arg)=>{
       setValue(arg.mess);
       const arr = messArr;
@@ -52,32 +60,7 @@ function CanvasPage(){
       });
       setMessArr(arr);
     })
-    // if(!playerID){
-    //   const pID = crypto.randomUUID();
-    //   localStorage.setItem('playerID',pID);
-    //   playerID=pID;
-    // }
-    const playerID = crypto.randomUUID();
-    let user= location.state?.userName;
-    let host=location.state?.isHost;
-    let joinTime = location.state?.joinTime;
-    // if(playerList.has(playerID)){
-    //   user = playerList.get(playerID).userName;
-    //   host = playerList.get(playerID).isHost;
-    //   joinTime = playerList.get(playerID).joinTime;
-    // }
-    setUserName(user);
-    setIsHost(host);
-    console.log(user);
-    console.log(host);
-    // update the logic to get server to verify the username and ishost
     roomIDRef.current=roomID;
-    socketRef.current.emit("join_room",{playerID,roomID,user,host,isDrawing,score,hasGuessed,joinTime});
-    socketRef.current.on("player_list",(arg)=>{
-      console.log(arg);
-      setPlayerList(new Map(arg))
-      
-    })
     return () => {
     socketRef.current?.disconnect()
   }
@@ -86,7 +69,6 @@ function CanvasPage(){
     socketRef.current.emit('round_info_req',roomIDRef.current);
   }
   function updateRoundInfo(){
-    reqRoundInfo();
     socketRef.current.on('update_round_info',(arg)=>{
       setRound(arg.roundNo);
       setGameState(arg.gameState);
@@ -95,6 +77,7 @@ function CanvasPage(){
       console.log("RECEIVED", arg);
       console.log(arg);
     })
+    reqRoundInfo();
   }
   function handleClick(){
     if(mess.length<=0) return;
@@ -130,6 +113,7 @@ function CanvasPage(){
                 <div className="font-['Press_Start_2P'] text-gray-300 text-2xl p-2 mt-4"> Waiting For Players . . . </div>
               )}
               {socketRef.current && startGame &&  <Canvas socket={socketRef.current} tool={tool} role ={roleRef.current} lineWidth={lineWidthRef.current}></Canvas>}
+              {!isHost && <div></div>}
               {isHost &&  !startGame && <div className='w-full'><button onClick={()=>
                 {setStartGame(true);
                 updateRoundInfo();

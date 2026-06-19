@@ -55,18 +55,27 @@ class RoundInfo{
 const scoreTable = new Map();
 const roundInfoMap = new Map();
 io.on("connection",(socket)=>{
-    socket.on("join_room",({playerID,roomID,user,host,isDrawing,score,hasGuessed,joinTime})=>{
-        socket.join(roomID);
-        socket.data.roomID=roomID;
-        console.log(user)
-        console.log(host)
+    // need to add check if player can join or not
+    socket.on("add_player",({playerID,roomID,userName,isHost,isDrawing,score,hasGuessed,joinTime})=>{
+        console.log(userName)
+        console.log(isHost)
         if(!scoreTable.has(roomID)){
             const mp=new Map();
-            mp.set(playerID, new PlayerData(user,0,host,isDrawing,joinTime,hasGuessed));
+            mp.set(playerID, new PlayerData(userName,score,isHost,isDrawing,joinTime,hasGuessed));
             scoreTable.set(roomID,mp);
         }
-        else scoreTable.get(roomID).set(playerID , new PlayerData(user,0,host,isDrawing,joinTime,hasGuessed));
-        io.to(socket.data.roomID).emit("player_list",Array.from(scoreTable.get(roomID).entries()));
+        else scoreTable.get(roomID).set(playerID , new PlayerData(userName,score,isHost,isDrawing,joinTime,hasGuessed));
+    })
+    socket.on("join_room",(arg)=>{
+        socket.join(arg);
+        socket.data.roomID=arg;
+        console.log("arg =", arg);
+        console.log("scoreTable =", scoreTable);
+        console.log("scoreTable.get(arg) =", scoreTable.get(arg));
+        // const players = Array.from(scoreTable.get(arg));
+        const players = Array.from(scoreTable.get(arg).entries());
+        console.log(players);
+        io.to(arg).emit("player_list", players);
     })
     socket.on("chat",(arg)=>{
         console.log(arg);
