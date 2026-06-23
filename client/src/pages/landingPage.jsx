@@ -17,7 +17,7 @@ function LandingPage(){
     const [joinCode, setJoinCode] = useState('');
     const navigate=useNavigate();
     const [joining,setJoining]= useState(false);
-    const socket = io('http://localhost:3000');
+    const socketRef = useRef(null);
     const gameState = 'Not Started';
     function handleRoomCreate(){
         if(joining) return;
@@ -30,7 +30,7 @@ function LandingPage(){
         roomID = nanoid(8);
         roomID = roomID.toUpperCase();
         const playerID = crypto.randomUUID();
-        socket.emit('add_player',{playerID,roomID,userName,
+        socketRef.current.emit('add_player',{playerID,roomID,userName,
             isHost: true,
             isDrawing: false,
             score:0 ,
@@ -38,7 +38,7 @@ function LandingPage(){
             joinTime:Date.now()
         });
         sessionStorage.setItem(roomID,playerID);
-        socket.emit('round_info', ({roomID,rounds,drawTime,players,gameState}));
+        socketRef.current.emit('round_info', ({roomID,rounds,drawTime,players,gameState}));
         setTimeout(() => {
             console.log('Creating...');
             navigate(`/canvas/${roomID}`);
@@ -57,7 +57,7 @@ function LandingPage(){
         }
         setJoining(true);
         const playerID = crypto.randomUUID();
-        socket.emit('add_player',{playerID,roomID:joinCode,userName,
+        socketRef.current.emit('add_player',{playerID,roomID:joinCode,userName,
             isHost: false,
             isDrawing: false,
             score:0 ,
@@ -71,6 +71,13 @@ function LandingPage(){
             setJoining(false);
         }, 500);
     }
+    useEffect(() => {
+    socketRef.current = io('http://localhost:3000');
+
+    return () => {
+        socketRef.current.disconnect();
+    };
+}, []);
     return(
         <div className=" flex flex-col min-h-screen ">
             <div className="bg-[#1a1a2e] flex text-3xl p-4 border-b border-violet-600 font-['Press_Start_2P'] text-orange-500"><div className="text-violet-600">Sketch</div>Guess</div>

@@ -5,6 +5,7 @@ import { useLocation, useParams } from 'react-router-dom';
 import PlayerCard from '../components/playerCard';
 import ToolBar from '../components/toolBox';
 import send_sym from '../assets/send.svg'
+import WordChoiceEle from '../components/wordChoiceEle';
 
 // add style on button hover
 // add animation on waiting for Players section
@@ -18,27 +19,29 @@ function CanvasPage(){
 
   const socketRef = useRef(null);
   const location = useLocation();
+
   const {roomID}=useParams();
   const [userName, setUserName] = useState('');
   const [isHost,setIsHost]=useState(false);
   const [isDrawing, setIsDrawing]= useState(false);
   const [hasGuessed, setHasGuessed]=useState(false);
   const [score,setScore]=useState(0);
-  const roomIDRef=useRef('');
   const roleRef=useRef(1);
   const [playerList,setPlayerList] = useState(new Map());
   const [startGame, setStartGame] = useState(false);
   const [messArr,setMessArr] = useState([]);
 
-  const [gameState, setGameState] = useState('');
+  const [gameState, setGameState] = useState("Not Started");
   const [round , setRound] = useState(9);
   const drawTimeRef = useRef(90);
   const maxPlayersRef =  useRef(10);
+
+  const [wordChoices,setWordChoices] = useState([]);
   
   const playerID = sessionStorage.getItem(roomID);
   useEffect(() => {
-    socketRef.current = io('http://localhost:3000')
-    socketRef.current.emit('join_room',roomID);
+    socketRef.current = io('http://localhost:3000');
+
     socketRef.current.on("player_list",(arg)=>{
       console.log(arg);
       const pMap = new Map(arg);
@@ -49,7 +52,22 @@ function CanvasPage(){
       setScore(playerData.score);
       setIsDrawing(playerData.isDrawing);
       setHasGuessed(playerData.hasGuessed);
+    });
+    socketRef.current.on('your_turn',(arg)=>{
+      setWordChoices(arg);
+    });
+    socketRef.current.on('update_round_info',(arg)=>{
+      setRound(arg.roundNo);
+      setGameState(arg.gameState);
+      drawTimeRef.current = arg.drawTime;
+      maxPlayersRef.current = arg.maxPlayers;
+      console.log("RECEIVED", arg);
+      console.log(arg);
+      if(arg.gameState==="Choosing"){
+        socketRef.current.emit('req_game_elements',{roomID,playerID});
+      }
     })
+
     socketRef.current.on("chat",(arg)=>{
       setValue(arg.mess);
       const arr = messArr;
@@ -59,25 +77,16 @@ function CanvasPage(){
         isMine:false
       });
       setMessArr(arr);
-    })
-    roomIDRef.current=roomID;
+    });
+    socketRef.current.emit('join_room',{roomID,playerID});
+    reqRoundInfo();
+    console.log(gameState);
     return () => {
     socketRef.current?.disconnect()
   }
   }, [])
   function reqRoundInfo(){
-    socketRef.current.emit('round_info_req',roomIDRef.current);
-  }
-  function updateRoundInfo(){
-    socketRef.current.on('update_round_info',(arg)=>{
-      setRound(arg.roundNo);
-      setGameState(arg.gameState);
-      drawTimeRef.current = arg.drawTime;
-      maxPlayersRef.current = arg.maxPlayers;
-      console.log("RECEIVED", arg);
-      console.log(arg);
-    })
-    reqRoundInfo();
+    socketRef.current.emit('round_info_req',roomID);
   }
   function handleClick(){
     if(mess.length<=0) return;
@@ -95,6 +104,10 @@ function CanvasPage(){
   function handleChange(e){
     setMess(e.target.value);
   }
+  function handleStartGame(){
+    setStartGame(true);
+    socketRef.current.emit('update_game_state',roomID);
+  }
     return(
         <div>
           <div className="bg-[#1a1a2e] flex text-3xl p-4 border-b border-violet-600 font-['Press_Start_2P'] text-orange-500"><div className="text-violet-600">Sketch</div>Guess</div>
@@ -106,18 +119,20 @@ function CanvasPage(){
               ))}
             </div>
             <div className={`col-span-15 ${!startGame ? 'flex flex-col justify-between items-center min-h-80' : ''}`}>
-              {!startGame && (
+              {gameState==="Not Started" && (
                 <div></div>
               )}
-              {!startGame && (
+              {gameState==="Not Started" && (
+                <div>
                 <div className="font-['Press_Start_2P'] text-gray-300 text-2xl p-2 mt-4"> Waiting For Players . . . </div>
+                </div>
               )}
-              {socketRef.current && startGame &&  <Canvas socket={socketRef.current} tool={tool} role ={roleRef.current} lineWidth={lineWidthRef.current}></Canvas>}
+              {gameState==="Choosing" && isDrawing && (<WordChoiceEle wordsToChoose={wordChoices} socket={socketRef.current}></WordChoiceEle>)}
+              {socketRef.current && gameState==="Playing" &&  <Canvas socket={socketRef.current} tool={tool} role ={roleRef.current} lineWidth={lineWidthRef.current}></Canvas>}
               {!isHost && <div></div>}
-              {isHost &&  !startGame && <div className='w-full'><button onClick={()=>
-                {setStartGame(true);
-                updateRoundInfo();
-                }} className="border border-white rounded-lg text-white w-full mt-1 self-end font-['Press_Start_2P']">Start</button></div>}
+              {isHost && (gameState==="Not Started" ? <div className='w-full'><button onClick={handleStartGame
+                } className="border border-white rounded-lg text-white w-full mt-1 self-end font-['Press_Start_2P'] hover:border hover:border-violet-400 hover:text-violet-400 hover:cursor-pointer">Start</button></div>
+              : <div></div> )}
             </div>
             <div className=' col-span-4 flex flex-col justify-end p-1'>
               {messArr.map((i,idx)=>(
