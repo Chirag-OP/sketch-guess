@@ -55,20 +55,33 @@ class RoundInfo{
     }
 }
 class GameEvents{
-    constructor(wordsToChoose, drawer){
+    constructor(wordsToChoose, drawer, timer, timerId =null){
         this.wordsToChoose = wordsToChoose;
         this.drawer = drawer;
+
+        this.timer = timer;
+        this.timerId= timerId
     }
 }
-let i=0;
-function chooseDrawer(){
+class wordToDisplay{
+    constructor(word, encoding){
+        this.word = word;
+        this.encoding = encoding;
+    }
+}
+function chooseDrawer(roomID){
     let roundChange = false;
-    if(i>=iterArr.length){
+    const players = Array.from(scoreTable.get(roomID).keys());
+    let i = iterArr.get(roomID);
+    if(i>=players.length){
         i=0;
+        iterArr.set(roomID,i);
         roundChange=true;
     }
-    if(!roundChange) return [iterArr[i++],roundChange];
-    return [iterArr[i],roundChange];
+    if(!roundChange){
+        iterArr.set(roomID,i+1);
+    }
+    return [players[i],roundChange];
 }
 function choose3Words(){
     const w1 =Math.floor(Math.random() * words.length);
@@ -84,14 +97,14 @@ function sendUpdatedPlayerData(roomID){
 const scoreTable = new Map();
 const roundInfoMap = new Map();
 const gameEleMap = new Map();
-const iterArr=[];
-
+const chosen_word = new Map();
+const iterArr=new Map();
 io.on("connection",(socket)=>{
     // need to add check if player can join or not
     socket.on("add_player",({playerID,roomID,userName,isHost,isDrawing,score,hasGuessed,joinTime})=>{
         // console.log(userName)
         // console.log(isHost)
-        iterArr.push(playerID);
+        if(!iterArr.has(roomID)) iterArr.set(roomID,0);
         if(!scoreTable.has(roomID)){
             const mp=new Map();
             mp.set(playerID, new PlayerData(userName,score,isHost,isDrawing,joinTime,hasGuessed));
@@ -103,7 +116,8 @@ io.on("connection",(socket)=>{
         socket.join(roomID);
         socket.data.roomID = roomID;
     
-        const player = scoreTable.get(roomID).get(playerID);
+        const player = scoreTable.get(roomID)?.get(playerID);
+        if(!player) return;
         if(player.socketID){ 
             // io.sockets.sockets is a map Socket.io maintains internally of all 
             // currently connected sockets, keyed by their ID
@@ -115,9 +129,30 @@ io.on("connection",(socket)=>{
         player.socketID = socket.id;
         sendUpdatedPlayerData(roomID);
     })
-    socket.on("chat",(arg)=>{
-        // console.log(arg);
-        socket.to(socket.data.roomID).emit("chat",arg);
+    socket.on("chat",({mess,userName,playerID})=>{
+        const roomID = socket.data.roomID;
+        console.log(roundInfoMap.get(roomID).gameState);
+        console.log(chosen_word.get(roomID));
+        console.log(mess);
+        if(roundInfoMap.get(roomID).gameState!=="Playing"){
+            socket.to(roomID).emit("chat",{mess, userName , isMine:false , guess:"No"});
+            socket.emit("chat",{mess,userName,isMine:true,guess:"No"});
+        }
+        else{
+            if(mess.toLowerCase()===chosen_word.get(roomID).word.toLowerCase()){
+                socket.to(roomID).emit("chat",{mess:"Guessed Correctly", userName , isMine:false , guess:"Correct"});
+                socket.emit("chat",{mess,userName,isMine:true,guess:"Correct"});
+                scoreTable.get(roomID).get(playerID).hasGuessed=true;
+                const players = Array.from(scoreTable.get(roomID).entries());
+                socket.emit("player_list",players)
+                socket.emit('word_to_display',chosen_word.get(roomID).word);
+            }
+            else{
+                socket.to(roomID).emit("chat",{mess, userName , isMine:false , guess:"inCorrect"});
+                socket.emit("chat",{mess,userName,isMine:true,guess:"inCorrect"});
+            }
+        }
+
     })
     socket.on("drawing",(arg)=>{
         io.to(socket.data.roomID).emit("drawing",arg);
@@ -131,12 +166,28 @@ io.on("connection",(socket)=>{
         socket.emit('update_round_info', roundInfoMap.get(arg));
     })
     socket.on('word_choice',(arg)=>{
-        // write word save logic and send to everyone
+        console.log('wordChosen', arg);
+        const roomID = socket.data.roomID;
+        roundInfoMap.get(roomID).gameState = "Playing";
+        console.log(roundInfoMap.get(roomID));
+        io.to(roomID).emit('update_round_info',roundInfoMap.get(roomID));
+        socket.emit('word_to_display',arg);
+        let encodedWord = '';
+        for(let i=0;i<arg.length;i++) encodedWord+="_";
+        console.log(encodedWord);
+        if(!chosen_word.has(roomID)){
+            chosen_word.set(roomID,new wordToDisplay(arg,encodedWord));
+        }
+        else{
+            chosen_word.get(roomID).word = arg;
+            chosen_word.get(roomID).encoding = encodedWord;
+        }
+        socket.to(roomID).emit('word_to_display',encodedWord);
     });
     socket.on('update_game_state',(arg)=>{
         const w= choose3Words();
         console.log(w);
-        const [drawer, roundChange] = chooseDrawer();
+        const [drawer, roundChange] = chooseDrawer(arg);
         if(roundChange){
             const currRound = roundInfoMap.get(arg).roundNo;
             if(currRound===1){
@@ -153,9 +204,21 @@ io.on("connection",(socket)=>{
             scoreTable.get(arg).get(drawer).isDrawing = true;
             io.to(arg).emit('update_round_info',roundInfoMap.get(arg));
             io.to(scoreTable.get(arg).get(drawer).socketID).emit('your_turn',w);
-            if(!gameEleMap.has(arg)) gameEleMap.set(arg,new GameEvents(w,drawer));
+            if(!gameEleMap.has(arg)) gameEleMap.set(arg,new GameEvents(w,drawer,15));
+            else gameEleMap.get(arg).timer = 15;
+            io.to(arg).emit('start_timer',gameEleMap.get(arg)?.timer);
+
+            // add function call to start the timer 
+
+
         }
         sendUpdatedPlayerData(arg);
+    })
+    socket.on('req_word_to_display',({roomID,playerID})=>{
+        const roomState = roundInfoMap.get(roomID);
+        if(roomState?.gameState!=="Playing") return;
+        if(scoreTable.get(roomID)?.get(playerID)?.isDrawing) socket.emit('word_to_display',chosen_word.get(roomID)?.word);
+        else socket.emit('word_to_display',chosen_word.get(roomID)?.encoding);
     })
     socket.on('req_game_elements',({roomID,playerID})=>{
         const roomState = roundInfoMap.get(roomID);
