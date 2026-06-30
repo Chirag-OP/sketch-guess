@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { useEffect } from "react";
+import { memo } from "react";
+import React from "react";
 function WordChoiceEle({wordsToChoose,socket}){
     const [clicked,setClicked] = useState(false);
     function handleClick(e){
@@ -19,4 +22,4 @@ function WordChoiceEle({wordsToChoose,socket}){
         </div>
     )
 }
-export default WordChoiceEle;
+export default React.memo(WordChoiceEle);

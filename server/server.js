@@ -94,6 +94,74 @@ function sendUpdatedPlayerData(roomID){
     // console.log(players);
     io.to(roomID).emit("player_list", players);
 }
+function findDrawer(roomID){
+    for(const [key,val] of scoreTable.get(roomID)){
+        if(val.isDrawing) return val.socketID;
+    }
+    return null;
+}
+function startTimer(roomID){
+    const event = gameEleMap.get(roomID);
+    console.log(event);
+    event.timerId = setInterval(()=>{
+        const currState = roundInfoMap.get(roomID).gameState;
+        if(event.timer<=1){
+            event.timer =0;
+            clearInterval(event.timerId);
+            if(currState==="Choosing"){
+                const socketID = findDrawer(roomID);
+                if(socketID){
+                    sendWordToDisplay(gameEleMap.get(roomID).wordsToChoose[0],roomID,socketID);
+                    updateGameState(roomID);
+                }
+            }
+        }
+        else event.timer-=1;
+        io.to(roomID).emit('update_timer',event.timer);
+    },1000)
+}
+function updateGameState(roomID){
+    const currState = roundInfoMap.get(roomID).gameState;
+    const arg=roomID
+    if(currState==="Not Started"){
+        const w= choose3Words();
+        console.log(w);
+        const [drawer, roundChange] = chooseDrawer(arg);
+        roundInfoMap.get(arg).gameState = "Choosing";
+        scoreTable.get(arg).get(drawer).isDrawing = true;
+        io.to(arg).emit('update_round_info',roundInfoMap.get(arg));
+        io.to(scoreTable.get(arg).get(drawer).socketID).emit('your_turn',w);
+        if(!gameEleMap.has(arg)) gameEleMap.set(arg,new GameEvents(w,drawer,15));
+        else gameEleMap.get(arg).timer = 15;
+        startTimer(arg);
+    }
+    else if(currState==="Choosing"){
+        roundInfoMap.get(arg).gameState = "Playing";
+        io.to(arg).emit('update_round_info',roundInfoMap.get(arg));
+    }
+    else if(currState==="Playing"){
+        // write something here
+    }
+}
+function sendWordToDisplay(word,roomID,socketID){
+    const arg=word;
+    io.to(socketID).emit('word_to_display',arg);
+    let encodedWord = '';
+    for(let i=0;i<arg.length;i++) encodedWord+="_";
+    console.log(encodedWord);
+    if(!chosen_word.has(roomID)){
+        chosen_word.set(roomID,new wordToDisplay(arg,encodedWord));
+    }
+    else{
+        chosen_word.get(roomID).word = arg;
+        chosen_word.get(roomID).encoding = encodedWord;
+    }
+    io.to(roomID).except(socketID).emit('word_to_display',encodedWord);
+    const intervalID = gameEleMap.get(roomID).timerId;
+    if(intervalID) clearInterval(intervalID);
+    gameEleMap.get(roomID).timer=roundInfoMap.get(roomID).drawTime;
+    startTimer(roomID);
+}
 const scoreTable = new Map();
 const roundInfoMap = new Map();
 const gameEleMap = new Map();
@@ -168,50 +236,41 @@ io.on("connection",(socket)=>{
     socket.on('word_choice',(arg)=>{
         console.log('wordChosen', arg);
         const roomID = socket.data.roomID;
-        roundInfoMap.get(roomID).gameState = "Playing";
-        console.log(roundInfoMap.get(roomID));
-        io.to(roomID).emit('update_round_info',roundInfoMap.get(roomID));
-        socket.emit('word_to_display',arg);
-        let encodedWord = '';
-        for(let i=0;i<arg.length;i++) encodedWord+="_";
-        console.log(encodedWord);
-        if(!chosen_word.has(roomID)){
-            chosen_word.set(roomID,new wordToDisplay(arg,encodedWord));
-        }
-        else{
-            chosen_word.get(roomID).word = arg;
-            chosen_word.get(roomID).encoding = encodedWord;
-        }
-        socket.to(roomID).emit('word_to_display',encodedWord);
+        // roundInfoMap.get(roomID).gameState = "Playing";
+        // console.log(roundInfoMap.get(roomID));
+        // io.to(roomID).emit('update_round_info',roundInfoMap.get(roomID));
+        sendWordToDisplay(arg,roomID,socket.id);
+        updateGameState(roomID);
     });
     socket.on('update_game_state',(arg)=>{
-        const w= choose3Words();
-        console.log(w);
-        const [drawer, roundChange] = chooseDrawer(arg);
-        if(roundChange){
-            const currRound = roundInfoMap.get(arg).roundNo;
-            if(currRound===1){
-                roundInfoMap.get(arg).gameState = "gameEnd";
-            }
-            else{
-                roundInfoMap.get(arg).roundNo -=1;
-                roundInfoMap.get(arg).gameState = "roundEnd";
-            }
-            io.to(arg).emit('update_round_info', roundInfoMap.get(arg));
-        }
-        else{
-            roundInfoMap.get(arg).gameState = "Choosing";
-            scoreTable.get(arg).get(drawer).isDrawing = true;
-            io.to(arg).emit('update_round_info',roundInfoMap.get(arg));
-            io.to(scoreTable.get(arg).get(drawer).socketID).emit('your_turn',w);
-            if(!gameEleMap.has(arg)) gameEleMap.set(arg,new GameEvents(w,drawer,15));
-            else gameEleMap.get(arg).timer = 15;
-            io.to(arg).emit('start_timer',gameEleMap.get(arg)?.timer);
+        // const w= choose3Words();
+        // console.log(w);
+        // const [drawer, roundChange] = chooseDrawer(arg);
+        // if(roundChange){
+        //     const currRound = roundInfoMap.get(arg).roundNo;
+        //     if(currRound===1){
+        //         roundInfoMap.get(arg).gameState = "gameEnd";
+        //     }
+        //     else{
+        //         roundInfoMap.get(arg).roundNo -=1;
+        //         roundInfoMap.get(arg).gameState = "roundEnd";
+        //     }
+        //     io.to(arg).emit('update_round_info', roundInfoMap.get(arg));
+        // }
+        // else{
+        //     roundInfoMap.get(arg).gameState = "Choosing";
+        //     scoreTable.get(arg).get(drawer).isDrawing = true;
+        //     io.to(arg).emit('update_round_info',roundInfoMap.get(arg));
+        //     io.to(scoreTable.get(arg).get(drawer).socketID).emit('your_turn',w);
+        //     if(!gameEleMap.has(arg)) gameEleMap.set(arg,new GameEvents(w,drawer,15));
+        //     else gameEleMap.get(arg).timer = 15;
+        //     startTimer(arg);
 
-            // add function call to start the timer 
+        //     // add function call to start the timer 
 
 
-        }
+        // }
+        updateGameState(arg);
         sendUpdatedPlayerData(arg);
     })
     socket.on('req_word_to_display',({roomID,playerID})=>{

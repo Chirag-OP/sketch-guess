@@ -95,18 +95,6 @@ function CanvasPage(){
     socketRef.current?.disconnect()
   }
   }, [])
-  function startTimer(t){
-    setTimer(t);
-    const id = setInterval(() => {
-    setTimer(prev => {
-      if (prev <= 1) {
-        clearInterval(id);
-        return 0;
-      }
-      return prev - 1;
-    });
-  }, 1000);
-  }
   function reqRoundInfo(){
     socketRef.current.emit('round_info_req',roomID);
   }
@@ -180,7 +168,7 @@ function CanvasPage(){
             </div>
           </div>
       </div>
-      {startGame && <ToolBar setTool={setTool} role={roleRef.current} lineWidth={lineWidthRef.current}></ToolBar>}
+      {gameState==="Playing" && isDrawing && <ToolBar setTool={setTool} role={roleRef.current} lineWidth={lineWidthRef.current}></ToolBar>}
       </div>
     )
 }

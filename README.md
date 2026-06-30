@@ -19,18 +19,26 @@ A real-time collaborative drawing application that allows multiple users to draw
 ## Completed Features
 - Canvas free-hand drawing
 - basic shape tools
-- Basic Drawing and Chat synchronization -> needs upgrades
+- Drawing and Chat synchronization
 - rooms logic with showing joined users and chat
-
+- Word selection system
+- Automatic word selection on timeout
+- showing selected word to drawer and its encoding to guessers
+- correct guess logic and displaying guessed correctly
 
 ## Planned
 - undo redo buttons
 - colors and brush size
 - guarented delivery from server to client using database
+- round end logic
+- auto round end on timer end
+- update player points logic
+- like unlike drawing option
+- room host can kick or accept players
 - player turn logic
-- word choice logic
 - shop logic to cast buff debuff
-
+- private/ public room logic
+- global leaderboard
 
 ## Design Decisions and their Reasons
 
@@ -57,6 +65,7 @@ significantly. Since each digit can be hexadecimal i.e 0-9 or a-f i.e 16 values
 **Problem:** With this approach socket is created at landingPage which lasts for all pages.But if after someone joins the game and then goes back to the landing Page, now since socket has already joined the previous room, i have to remove previous joined rooms before letting him enter a new room. Moreover if after joining the game room reloads the game window now the original socket which had joined the room gets disconnected and a new socket is made for which i have to again call join room. Moreover
 
 **Decision:** So this problem points that either i should create a new socket everytime a player enters game page or use a global socket but handle the extra remove previous room logic. So i created a seperate socket for game Page.
+
 
 
 ##  Technical Challenges Faced and Solutions
@@ -92,3 +101,13 @@ The server emits roundInfo when new turn begins but sometimes since canvas Page 
 Implemented reqRoundInfo.<br>
 So now whenever canvas Page is ready or need the round info it requests the server and server responds with the info. Hence ensuring the data recieve is never missed
 
+### Different Views for Drawer and Guessers
+
+**Problem:**
+When a round starts, the drawer must see the actual word while every other player should only see its encoded form (i.e `_____`).This same logic should work even when the server automatically selects a word after the choosing timer expires, where no frontend socket event is available.
+
+**Solution:**
+Stored the current drawer's `socketID` on the server and used targeted Socket.IO emissions:
+- `io.to(drawerSocketID).emit(...)` to send the actual word only to the drawer.
+- `io.to(roomID).except(drawerSocketID).emit(...)` to send the encoded word to every other player.
+This allowed the server to initiate the transition to the playing phase regardless of whether the word was chosen by the player or automatically after a timeout.
