@@ -44,6 +44,7 @@ class PlayerData{
         this.joinTime=joinTime;
         this.hasGuessed=hasGuessed;
         this.socketID = socketID;
+        this.currTurnScore =0;
     }
 }
 class RoundInfo{
@@ -58,7 +59,7 @@ class GameEvents{
     constructor(wordsToChoose, drawer, timer, timerId =null){
         this.wordsToChoose = wordsToChoose;
         this.drawer = drawer;
-
+        this.correctGuesses=0;
         this.timer = timer;
         this.timerId= timerId
     }
@@ -69,19 +70,23 @@ class wordToDisplay{
         this.encoding = encoding;
     }
 }
-function chooseDrawer(roomID){
+function chooseDrawer(roomID) {
     let roundChange = false;
-    const players = Array.from(scoreTable.get(roomID).keys());
+    const players = Array.from(scoreTable.get(roomID)?.keys());
+    const room = scoreTable.get(roomID);
+    for(let i=0;i<players.length;i++){
+        room.get(players[i]).isDrawing = false;
+        room.get(players[i]).hasGuessed = false;
+    }
     let i = iterArr.get(roomID);
-    if(i>=players.length){
-        i=0;
-        iterArr.set(roomID,i);
+    if(i>=players.length) {
+        i= 0;
         roundChange=true;
     }
-    if(!roundChange){
-        iterArr.set(roomID,i+1);
-    }
-    return [players[i],roundChange];
+    const drawer=players[i];
+    iterArr.set(roomID, i + 1);
+
+    return [drawer, roundChange];
 }
 function choose3Words(){
     const w1 =Math.floor(Math.random() * words.length);
@@ -90,8 +95,7 @@ function choose3Words(){
     return [words[w1],words[w2],words[w3]];
 }
 function sendUpdatedPlayerData(roomID){
-    const players = Array.from(scoreTable.get(roomID).entries());
-    // console.log(players);
+    const players = Array.from(scoreTable.get(roomID)?.entries());
     io.to(roomID).emit("player_list", players);
 }
 function findDrawer(roomID){
@@ -102,9 +106,17 @@ function findDrawer(roomID){
 }
 function startTimer(roomID){
     const event = gameEleMap.get(roomID);
-    console.log(event);
     event.timerId = setInterval(()=>{
-        const currState = roundInfoMap.get(roomID).gameState;
+        const roundInfo = roundInfoMap.get(roomID);
+        const currState = roundInfo.gameState;
+        const maxPlayers = scoreTable.get(roomID).size;
+        const correctGuesses = gameEleMap.get(roomID)?.correctGuesses;
+        if(currState==="Playing" && correctGuesses===maxPlayers-1){
+            event.timer =0;
+            clearInterval(event.timerId);
+            updateGameState(roomID);
+            return;
+        }
         if(event.timer<=1){
             event.timer =0;
             clearInterval(event.timerId);
@@ -115,24 +127,50 @@ function startTimer(roomID){
                     updateGameState(roomID);
                 }
             }
+            else if(currState==="Playing") updateGameState(roomID);
+            else if(currState==="Show Results"){
+                roundInfoMap.get(roomID).gameState="Next Turn";
+                updateGameState(roomID);
+            }
         }
         else event.timer-=1;
         io.to(roomID).emit('update_timer',event.timer);
     },1000)
 }
 function updateGameState(roomID){
-    const currState = roundInfoMap.get(roomID).gameState;
+    const currState = roundInfoMap.get(roomID)?.gameState;
     const arg=roomID
-    if(currState==="Not Started"){
+    if(currState==="Not Started" || currState==="Next Turn"){
         const w= choose3Words();
         console.log(w);
+        console.log(iterArr);
         const [drawer, roundChange] = chooseDrawer(arg);
+        // if(roundChange){
+        //     const currRound = roundInfoMap.get(arg).roundNo;
+        //     if(currRound===1){
+        //         roundInfoMap.get(arg).gameState = "gameEnd";
+        //     }
+        //     else{
+        //         roundInfoMap.get(arg).roundNo -=1;
+        //         roundInfoMap.get(arg).gameState = "roundEnd";
+        //     }
+        //     io.to(arg).emit('update_round_info', roundInfoMap.get(arg));
+        // }
         roundInfoMap.get(arg).gameState = "Choosing";
         scoreTable.get(arg).get(drawer).isDrawing = true;
+        sendUpdatedPlayerData(roomID);
+        console.log("after");
+        console.log(iterArr);
         io.to(arg).emit('update_round_info',roundInfoMap.get(arg));
         io.to(scoreTable.get(arg).get(drawer).socketID).emit('your_turn',w);
         if(!gameEleMap.has(arg)) gameEleMap.set(arg,new GameEvents(w,drawer,15));
-        else gameEleMap.get(arg).timer = 15;
+        else{
+            const game = gameEleMap.get(arg);
+            game.wordsToChoose = w;
+            game.drawer = drawer;
+            game.timer = 15;
+            game.correctGuesses = 0;
+        }
         startTimer(arg);
     }
     else if(currState==="Choosing"){
@@ -140,7 +178,21 @@ function updateGameState(roomID){
         io.to(arg).emit('update_round_info',roundInfoMap.get(arg));
     }
     else if(currState==="Playing"){
-        // write something here
+        addCurrTurnScore(roomID,"drawer");
+        addScore(roomID);
+        sendUpdatedPlayerData(roomID);
+        roundInfoMap.get(arg).gameState = "Show Results";
+        const word = "waiting";
+        const w = chosen_word.get(roomID);
+        if(w){
+            w.word = word;
+            w.encoding = word;
+            console.log(w.word);
+        }
+        io.to(arg).emit('word_to_display',word);
+        io.to(arg).emit('update_round_info',roundInfoMap.get(arg));
+        gameEleMap.get(roomID).timer = 5;
+        startTimer(roomID);
     }
 }
 function sendWordToDisplay(word,roomID,socketID){
@@ -148,7 +200,6 @@ function sendWordToDisplay(word,roomID,socketID){
     io.to(socketID).emit('word_to_display',arg);
     let encodedWord = '';
     for(let i=0;i<arg.length;i++) encodedWord+="_";
-    console.log(encodedWord);
     if(!chosen_word.has(roomID)){
         chosen_word.set(roomID,new wordToDisplay(arg,encodedWord));
     }
@@ -162,6 +213,35 @@ function sendWordToDisplay(word,roomID,socketID){
     gameEleMap.get(roomID).timer=roundInfoMap.get(roomID).drawTime;
     startTimer(roomID);
 }
+function addCurrTurnScore(roomID,playerID){
+    const RoundInfo = roundInfoMap.get(roomID);
+    const gameEvents = gameEleMap.get(roomID);
+    if(!RoundInfo || !gameEvents) return;
+    if(playerID==="drawer"){
+        playerID = gameEvents.drawer;
+        if(!playerID) return;
+        const player = scoreTable.get(roomID)?.get(playerID);
+        if(!player) return;
+        player.currTurnScore+=(50*gameEvents.correctGuesses);
+        return;
+    }
+    const player = scoreTable.get(roomID)?.get(playerID);
+    if(!player) return;
+    if(player.hasGuessed) return;
+    const drawTime = RoundInfo.drawTime;
+    const timeLeft = gameEvents.timer;
+    const maxPlayers = scoreTable.get(roomID).size;
+    player.hasGuessed=true;
+    gameEvents.correctGuesses++;
+    player.currTurnScore+= Math.floor(50 * (maxPlayers-1) *(timeLeft/drawTime));
+}
+function addScore(roomID){
+    const room = scoreTable.get(roomID);
+    for(const [playerID, player] of room){
+        player.score+=player.currTurnScore;
+        player.currTurnScore=0;
+    }
+}
 const scoreTable = new Map();
 const roundInfoMap = new Map();
 const gameEleMap = new Map();
@@ -170,8 +250,6 @@ const iterArr=new Map();
 io.on("connection",(socket)=>{
     // need to add check if player can join or not
     socket.on("add_player",({playerID,roomID,userName,isHost,isDrawing,score,hasGuessed,joinTime})=>{
-        // console.log(userName)
-        // console.log(isHost)
         if(!iterArr.has(roomID)) iterArr.set(roomID,0);
         if(!scoreTable.has(roomID)){
             const mp=new Map();
@@ -183,7 +261,7 @@ io.on("connection",(socket)=>{
     socket.on("join_room",({roomID,playerID})=>{
         socket.join(roomID);
         socket.data.roomID = roomID;
-    
+        socket.data.playerID = playerID;
         const player = scoreTable.get(roomID)?.get(playerID);
         if(!player) return;
         if(player.socketID){ 
@@ -199,20 +277,16 @@ io.on("connection",(socket)=>{
     })
     socket.on("chat",({mess,userName,playerID})=>{
         const roomID = socket.data.roomID;
-        console.log(roundInfoMap.get(roomID).gameState);
-        console.log(chosen_word.get(roomID));
-        console.log(mess);
         if(roundInfoMap.get(roomID).gameState!=="Playing"){
             socket.to(roomID).emit("chat",{mess, userName , isMine:false , guess:"No"});
             socket.emit("chat",{mess,userName,isMine:true,guess:"No"});
         }
         else{
             if(mess.toLowerCase()===chosen_word.get(roomID).word.toLowerCase()){
+                addCurrTurnScore(roomID,playerID);
                 socket.to(roomID).emit("chat",{mess:"Guessed Correctly", userName , isMine:false , guess:"Correct"});
                 socket.emit("chat",{mess,userName,isMine:true,guess:"Correct"});
-                scoreTable.get(roomID).get(playerID).hasGuessed=true;
-                const players = Array.from(scoreTable.get(roomID).entries());
-                socket.emit("player_list",players)
+                sendUpdatedPlayerData(roomID);
                 socket.emit('word_to_display',chosen_word.get(roomID).word);
             }
             else{
@@ -227,49 +301,16 @@ io.on("connection",(socket)=>{
     })
     socket.on('round_info', ({roomID,rounds,drawTime,players,gameState})=>{
         roundInfoMap.set(roomID,new RoundInfo(rounds,drawTime,players,gameState));
-        console.log(roomID,rounds,drawTime,players,gameState)
     })
     socket.on('round_info_req',(arg)=>{
-        console.log('round_info_req | socket:', socket.id);
         socket.emit('update_round_info', roundInfoMap.get(arg));
     })
     socket.on('word_choice',(arg)=>{
-        console.log('wordChosen', arg);
         const roomID = socket.data.roomID;
-        // roundInfoMap.get(roomID).gameState = "Playing";
-        // console.log(roundInfoMap.get(roomID));
-        // io.to(roomID).emit('update_round_info',roundInfoMap.get(roomID));
         sendWordToDisplay(arg,roomID,socket.id);
         updateGameState(roomID);
     });
     socket.on('update_game_state',(arg)=>{
-        // const w= choose3Words();
-        // console.log(w);
-        // const [drawer, roundChange] = chooseDrawer(arg);
-        // if(roundChange){
-        //     const currRound = roundInfoMap.get(arg).roundNo;
-        //     if(currRound===1){
-        //         roundInfoMap.get(arg).gameState = "gameEnd";
-        //     }
-        //     else{
-        //         roundInfoMap.get(arg).roundNo -=1;
-        //         roundInfoMap.get(arg).gameState = "roundEnd";
-        //     }
-        //     io.to(arg).emit('update_round_info', roundInfoMap.get(arg));
-        // }
-        // else{
-        //     roundInfoMap.get(arg).gameState = "Choosing";
-        //     scoreTable.get(arg).get(drawer).isDrawing = true;
-        //     io.to(arg).emit('update_round_info',roundInfoMap.get(arg));
-        //     io.to(scoreTable.get(arg).get(drawer).socketID).emit('your_turn',w);
-        //     if(!gameEleMap.has(arg)) gameEleMap.set(arg,new GameEvents(w,drawer,15));
-        //     else gameEleMap.get(arg).timer = 15;
-        //     startTimer(arg);
-
-        //     // add function call to start the timer 
-
-
-        // }
         updateGameState(arg);
         sendUpdatedPlayerData(arg);
     })
@@ -281,9 +322,7 @@ io.on("connection",(socket)=>{
     })
     socket.on('req_game_elements',({roomID,playerID})=>{
         const roomState = roundInfoMap.get(roomID);
-        console.log(roomState);
         const player = scoreTable.get(roomID)?.get(playerID);
-        console.log(player);
         if (roomState?.gameState !== "Choosing") return;
         if (!player?.isDrawing) return;
     

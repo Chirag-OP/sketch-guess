@@ -67,7 +67,7 @@ function CanvasPage(){
       if(arg.gameState==="Choosing"){
         socketRef.current.emit('req_game_elements',{roomID,playerID});
       }
-      else if(arg.gameState==="Playing"){
+      else if(arg.gameState==="Playing" || arg.gameState==="Show Results"){
         socketRef.current.emit('req_word_to_display',{roomID,playerID});
       }
     })
@@ -147,6 +147,7 @@ function CanvasPage(){
                 </>
               )}
               {socketRef.current && gameState==="Playing" &&  <Canvas socket={socketRef.current} tool={tool} role ={roleRef.current} lineWidth={lineWidthRef.current}></Canvas>}
+              {gameState==="Show Results" && <div>showing results</div>}
             </div>
             <div className=' col-span-4 flex flex-col justify-end p-1'>
               {messArr.map((i,idx)=>(
