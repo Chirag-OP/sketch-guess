@@ -25,6 +25,8 @@ A real-time collaborative drawing application that allows multiple users to draw
 - Automatic word selection on timeout
 - showing selected word to drawer and its encoding to guessers
 - correct guess logic and displaying guessed correctly
+- auto next turn on timer end
+- update player points logic
 
 ## Planned
 - undo redo buttons
@@ -32,10 +34,8 @@ A real-time collaborative drawing application that allows multiple users to draw
 - guarented delivery from server to client using database
 - round end logic
 - auto round end on timer end
-- update player points logic
 - like unlike drawing option
 - room host can kick or accept players
-- player turn logic
 - shop logic to cast buff debuff
 - private/ public room logic
 - global leaderboard
@@ -52,20 +52,27 @@ significantly. Since each digit can be hexadecimal i.e 0-9 or a-f i.e 16 values
 
 **Decision:** so i decided to use Nanoid since its specifically designed to produce short unique IDs with minimal chance of collision. Since Its default alphabet contains 64 URL-safe characters. Moreover it produces more share friendly joinCodes.
 
-#### Using Local storage
+### Using Session storage
 **Initial approach:** use local storage to store playerID to prevent score loss on reconnection
 
 **Problem:** But this give rise to another Problem of overWriting player details if that same player rejoins from same browser using different name. Also to prevent this if i tend to store username in url parameter then link won't be shareable
 
 **Decision:** Using Session Storage to store the playerID for that session only hence preventing overwriting on new tab and still playerID persists on tab reload
 
-#### Global Socket
+### Global Socket
 **Initial approach:** using a global socket for all the pages of app
 
 **Problem:** With this approach socket is created at landingPage which lasts for all pages.But if after someone joins the game and then goes back to the landing Page, now since socket has already joined the previous room, i have to remove previous joined rooms before letting him enter a new room. Moreover if after joining the game room reloads the game window now the original socket which had joined the room gets disconnected and a new socket is made for which i have to again call join room. Moreover
 
 **Decision:** So this problem points that either i should create a new socket everytime a player enters game page or use a global socket but handle the extra remove previous room logic. So i created a seperate socket for game Page.
 
+### Deferred Score Updates
+
+**Initial approach:** Update each player's total score immediately after they guess the word correctly.
+
+**Problem:** This causes the leaderboard to keep changing during gameplay, making the results screen less meaningful and preventing a clear per-turn score summary.
+
+**Decision:** Introduced a separate `currTurnScore` for each player. Scores are calculated immediately after a correct guess but are only added to the total score during the **Show Results** phase. This keeps gameplay state and score updates separate while allowing the UI to display per-turn score additions.
 
 
 ##  Technical Challenges Faced and Solutions

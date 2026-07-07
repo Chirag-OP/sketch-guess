@@ -80,7 +80,7 @@ function chooseDrawer(roomID) {
     }
     let i = iterArr.get(roomID);
     if(i>=players.length) {
-        i= 0;
+        i= -1;
         roundChange=true;
     }
     const drawer=players[i];
@@ -128,7 +128,9 @@ function startTimer(roomID){
                 }
             }
             else if(currState==="Playing") updateGameState(roomID);
-            else if(currState==="Show Results"){
+            else if(currState==="Show Results" || currState==="Round End"){
+                addScore(roomID);
+                sendUpdatedPlayerData(roomID);
                 roundInfoMap.get(roomID).gameState="Next Turn";
                 updateGameState(roomID);
             }
@@ -145,17 +147,21 @@ function updateGameState(roomID){
         console.log(w);
         console.log(iterArr);
         const [drawer, roundChange] = chooseDrawer(arg);
-        // if(roundChange){
-        //     const currRound = roundInfoMap.get(arg).roundNo;
-        //     if(currRound===1){
-        //         roundInfoMap.get(arg).gameState = "gameEnd";
-        //     }
-        //     else{
-        //         roundInfoMap.get(arg).roundNo -=1;
-        //         roundInfoMap.get(arg).gameState = "roundEnd";
-        //     }
-        //     io.to(arg).emit('update_round_info', roundInfoMap.get(arg));
-        // }
+        if(roundChange){
+            const currRound = roundInfoMap.get(arg).roundNo;
+            if(currRound===1){
+                roundInfoMap.get(arg).roundNo -=1;
+                roundInfoMap.get(arg).gameState = "Game End";
+            }
+            else{
+                roundInfoMap.get(arg).roundNo -=1;
+                roundInfoMap.get(arg).gameState = "Round End";
+                gameEleMap.get(roomID).timer = 5;
+                startTimer(roomID);
+            }
+            io.to(arg).emit('update_round_info', roundInfoMap.get(arg));
+            return;
+        }
         roundInfoMap.get(arg).gameState = "Choosing";
         scoreTable.get(arg).get(drawer).isDrawing = true;
         sendUpdatedPlayerData(roomID);
@@ -179,7 +185,6 @@ function updateGameState(roomID){
     }
     else if(currState==="Playing"){
         addCurrTurnScore(roomID,"drawer");
-        addScore(roomID);
         sendUpdatedPlayerData(roomID);
         roundInfoMap.get(arg).gameState = "Show Results";
         const word = "waiting";
