@@ -253,29 +253,49 @@ const gameEleMap = new Map();
 const chosen_word = new Map();
 const iterArr=new Map();
 io.on("connection",(socket)=>{
-    // need to add check if player can join or not
+    socket.on("create_room",({playerID,roomID,userName,isHost,isDrawing,score,hasGuessed,joinTime})=>{
+        iterArr.set(roomID,0);
+        const mp=new Map();
+        mp.set(playerID, new PlayerData(userName,score,isHost,isDrawing,joinTime,hasGuessed));
+        scoreTable.set(roomID,mp);
+    })
     socket.on("add_player",({playerID,roomID,userName,isHost,isDrawing,score,hasGuessed,joinTime})=>{
-        if(!iterArr.has(roomID)) iterArr.set(roomID,0);
         if(!scoreTable.has(roomID)){
-            const mp=new Map();
-            mp.set(playerID, new PlayerData(userName,score,isHost,isDrawing,joinTime,hasGuessed));
-            scoreTable.set(roomID,mp);
+            socket.emit('add_player',"Room Doesn't exist");
         }
-        else scoreTable.get(roomID).set(playerID , new PlayerData(userName,score,isHost,isDrawing,joinTime,hasGuessed));
+        else {
+            const currSize = scoreTable.get(roomID).size;
+            const maxPlayers = roundInfoMap.get(roomID).maxPlayers;
+            if(currSize==maxPlayers) socket.emit('add_player',"Room is full");
+            else{
+                scoreTable.get(roomID).set(playerID , new PlayerData(userName,score,isHost,isDrawing,joinTime,hasGuessed));
+                socket.emit('add_player',"success");
+            }
+        }
     })
     socket.on("join_room",({roomID,playerID})=>{
+        if(!scoreTable.has(roomID)){
+            socket.emit('redirect',"");
+            return;
+        }
+        const player = scoreTable.get(roomID)?.get(playerID);
+        if(!player){
+            socket.emit('redirect',roomID);
+            return;
+        }
         socket.join(roomID);
         socket.data.roomID = roomID;
         socket.data.playerID = playerID;
-        const player = scoreTable.get(roomID)?.get(playerID);
-        if(!player) return;
         if(player.socketID){ 
             // io.sockets.sockets is a map Socket.io maintains internally of all 
             // currently connected sockets, keyed by their ID
             const oldSocket = io.sockets.sockets.get(player.socketID); 
             // makes the socketID string into a socket object since leaving 
             // requires socket object itself
-            if(oldSocket) oldSocket.leave(roomID);   
+            if(oldSocket){
+                oldSocket.leave(roomID);   
+                oldSocket.disconnect(true);
+            }
         }
         player.socketID = socket.id;
         sendUpdatedPlayerData(roomID);

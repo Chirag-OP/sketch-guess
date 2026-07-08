@@ -30,7 +30,7 @@ function LandingPage(){
         roomID = nanoid(8);
         roomID = roomID.toUpperCase();
         const playerID = crypto.randomUUID();
-        socketRef.current.emit('add_player',{playerID,roomID,userName,
+        socketRef.current.emit('create_room',{playerID,roomID,userName,
             isHost: true,
             isDrawing: false,
             score:0 ,
@@ -56,6 +56,18 @@ function LandingPage(){
             return;
         }
         setJoining(true);
+        socketRef.current.once('add_player',(arg)=>{
+            clearTimeout(timeout);
+            if(arg==="success"){
+                sessionStorage.setItem(joinCode,playerID);
+                setTimeout(() => {
+                    console.log('Joining...');
+                    navigate(`/canvas/${joinCode}`);
+                }, 500);
+            }
+            else alert(arg);
+            setJoining(false);
+        })
         const playerID = crypto.randomUUID();
         socketRef.current.emit('add_player',{playerID,roomID:joinCode,userName,
             isHost: false,
@@ -64,20 +76,26 @@ function LandingPage(){
             hasGuessed:false,
             joinTime:Date.now()
         });
-        sessionStorage.setItem(joinCode,playerID);
-        setTimeout(() => {
-            console.log('Joining...');
-            navigate(`/canvas/${joinCode}`);
+        const timeout = setTimeout(() => {
             setJoining(false);
-        }, 500);
+            alert("Server did not respond.");
+        }, 5000);
     }
     useEffect(() => {
     socketRef.current = io('http://localhost:3000');
-
     return () => {
+        console.log("React Router location:", location);
+        console.log("State:", location.state);
         socketRef.current.disconnect();
     };
 }, []);
+    useEffect(()=>{
+        console.log(location.state);
+        if(location.state?.roomID){
+            console.log(location.state?.roomID)
+            setJoinCode(location.state.roomID);
+        }
+    },[location.state])
     return(
         <div className=" flex flex-col min-h-screen ">
             <div className="bg-[#1a1a2e] flex text-3xl p-4 border-b border-violet-600 font-['Press_Start_2P'] text-orange-500"><div className="text-violet-600">Sketch</div>Guess</div>
@@ -92,7 +110,7 @@ function LandingPage(){
                     </div>
                     {!createRoom && <div className="mb-1">
                         <div className="text-gray-400 text-xs">JOIN CODE *</div>
-                        <input type="text" id='joinCode' className="bg-gray-600 rounded-lg w-56 text-gray-200" placeholder="Enter Room Code" onChange={(e)=>setJoinCode(e.target.value)}/>
+                        <input type="text" id='joinCode' className="bg-gray-600 rounded-lg w-56 text-gray-200" placeholder="Enter Room Code" value={joinCode} onChange={(e)=>setJoinCode(e.target.value)}/>
                         </div>}
                     {createRoom && (
                         <div className="flex flex-col gap-2">

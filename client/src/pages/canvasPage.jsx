@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { io } from "socket.io-client";
 import Canvas from '../components/canvas';
-import { useLocation, useParams } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import PlayerCard from '../components/playerCard';
 import ToolBar from '../components/toolBox';
 import send_sym from '../assets/send.svg'
@@ -18,6 +18,7 @@ function CanvasPage(){
 
   const socketRef = useRef(null);
   const location = useLocation();
+  const navigate = useNavigate();
 
   const {roomID}=useParams();
   const [userName, setUserName] = useState('');
@@ -42,7 +43,16 @@ function CanvasPage(){
   const [timer,setTimer] = useState(0);
   useEffect(() => {
     socketRef.current = io('http://localhost:3000');
-
+    socketRef.current.once('redirect',(arg)=>{
+      console.log(arg);
+      navigate('/',{
+        state:{
+          roomID:arg,
+        },
+      })
+      console.log("naivagetd: ", {roomID:arg});
+      return;
+    })
     socketRef.current.on("player_list",(arg)=>{
       console.log(arg);
       const pMap = new Map(arg);
