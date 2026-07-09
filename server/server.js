@@ -187,6 +187,7 @@ function updateGameState(roomID){
         addCurrTurnScore(roomID,"drawer");
         sendUpdatedPlayerData(roomID);
         roundInfoMap.get(arg).gameState = "Show Results";
+        drawingMap.set(roomID,[]);
         const word = "waiting";
         const w = chosen_word.get(roomID);
         if(w){
@@ -252,6 +253,7 @@ const roundInfoMap = new Map();
 const gameEleMap = new Map();
 const chosen_word = new Map();
 const iterArr=new Map();
+const drawingMap = new Map();
 io.on("connection",(socket)=>{
     socket.on("create_room",({playerID,roomID,userName,isHost,isDrawing,score,hasGuessed,joinTime})=>{
         iterArr.set(roomID,0);
@@ -322,7 +324,14 @@ io.on("connection",(socket)=>{
 
     })
     socket.on("drawing",(arg)=>{
-        io.to(socket.data.roomID).emit("drawing",arg);
+        const roomID= socket.data.roomID;
+        drawingMap.set(roomID,arg);
+        io.to(roomID).emit("drawing",arg);
+    })
+    socket.on('req_drawing',(arg)=>{
+        const roomID = socket.data.roomID;
+        const currState = roundInfoMap.get(roomID)?.gameState;
+        if(currState==="Playing") socket.emit("drawing",drawingMap.get(roomID) ?? []);
     })
     socket.on('round_info', ({roomID,rounds,drawTime,players,gameState})=>{
         roundInfoMap.set(roomID,new RoundInfo(rounds,drawTime,players,gameState));

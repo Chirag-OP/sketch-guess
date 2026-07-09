@@ -6,12 +6,12 @@ import sqare_sym from '../assets/square.svg'
 import circle_sym from '../assets/circle.svg'
 import line_sym from '../assets/minus.svg'
 
-function ToolBar({setTool,role,lineWidth}){
+function ToolBar({setTool,lineWidth}){
     function handleChange(e){
         lineWidth=e.target.value;
     }
     return(
-    <div className={`${role===0 ? 'opacity-0 pointer-events-none' : ''} flex gap-2 m-2 p-4 rounded-xl bg-[#1e1a3a] absolute left-4/12 bottom-2 border border-violet-600`}>
+    <div className={`flex gap-2 m-2 p-4 rounded-xl bg-[#1e1a3a] absolute left-1/2 -translate-x-1/2 bottom-2 border border-violet-600`}>
         <button className='bg-gray-300 rounded-xs p-1 m-1 hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-300' onClick={()=>{setTool('pencil')}}><img src={pencil_sym}></img></button>
         <button className='bg-gray-300 rounded-xs p-1 m-1 hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-300' onClick={()=>{setTool('rectangle')}}><img src={sqare_sym}></img></button>
         <button className='bg-gray-300 rounded-xs p-1 m-1 hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-300' onClick={()=>{setTool('circle')}}><img src={circle_sym}></img></button>

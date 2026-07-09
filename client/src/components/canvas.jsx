@@ -3,7 +3,7 @@ import { io } from "socket.io-client";
 import ToolBar from './toolBox';
 import { useLocation, useParams } from 'react-router-dom';
 
-function Canvas({socket,tool,role,lineWidth}){
+function Canvas({socket,tool,isDrawer,lineWidth}){
   const socketRef = useRef(null);
   const xRef=useRef(null);
   const yRef=useRef(null);
@@ -17,6 +17,11 @@ function Canvas({socket,tool,role,lineWidth}){
     socketRef.current = socket;
     const canvas=canvasRef.current;
     const ctx=canvas.getContext('2d');
+    socketRef.current.on("drawing",(arg)=>{
+      drawingArr.current=arg;
+      redraw();
+    })
+    socketRef.current.emit('req_drawing',"");
     const redraw=()=>{
       ctx.strokeStyle='black';
       ctx.clearRect(0,0,1000,500);
@@ -55,10 +60,6 @@ function Canvas({socket,tool,role,lineWidth}){
     }
 
     redrawRef.current=redraw;
-    socketRef.current.on("drawing",(arg)=>{
-      drawingArr.current=arg;
-      redraw();
-    })
     const resizeCanvas=()=>{
       if(!canvasContRef.current) return;
       const w=canvasContRef.current.clientWidth;
@@ -86,10 +87,10 @@ function Canvas({socket,tool,role,lineWidth}){
   if(tool!=="clear_all") return;
   ctxRef.current?.clearRect(0, 0, 1000, 500);
   drawingArr.current = [];
-  if(role===1) {
+  if(isDrawer) {
     socketRef.current?.emit("drawing", []);
   }
-}, [tool, role]);
+}, [tool, isDrawer]);
   function startDrawing(e){
     const {offsetX, offsetY}=e.nativeEvent;
     isDrawingRef.current=true;
@@ -136,7 +137,7 @@ function Canvas({socket,tool,role,lineWidth}){
         finishY:offsetY
       });
     }
-    if(role===1) socketRef.current?.emit("drawing",drawingArr.current);
+    if(isDrawer) socketRef.current?.emit("drawing",drawingArr.current);
     isDrawingRef.current=false;
     redrawRef.current?.();
   }

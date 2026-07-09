@@ -1,13 +1,10 @@
-import { Link , useNavigate, useParams} from "react-router-dom";
+import { useNavigate, useLocation} from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
 import { io } from "socket.io-client";
-// need to add the check for join success before storing inside session storage
-// if someone directly uses share link no username appears=>
-// try adding some default names or from browser or from past user login etc
-// and on join request on roomID, do a get or post request to check if roomID exists
+
 // add password on join or host recieves request so he can accept or reject
-// for reconnection logic i can add JWT to map persons previous socket id and assign his previous score to him on reconnect
+
 function LandingPage(){
     const [createRoom,setCreateRoom]=useState(false);
     const [players, setPlayers] = useState(5);
@@ -15,7 +12,10 @@ function LandingPage(){
     const [rounds,setRounds] = useState(3);
     const [userName,setUserName]=useState('');
     const [joinCode, setJoinCode] = useState('');
+
     const navigate=useNavigate();
+    const location= useLocation();
+
     const [joining,setJoining]= useState(false);
     const socketRef = useRef(null);
     const gameState = 'Not Started';
@@ -84,8 +84,6 @@ function LandingPage(){
     useEffect(() => {
     socketRef.current = io('http://localhost:3000');
     return () => {
-        console.log("React Router location:", location);
-        console.log("State:", location.state);
         socketRef.current.disconnect();
     };
 }, []);
