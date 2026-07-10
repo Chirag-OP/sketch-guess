@@ -5,6 +5,7 @@ import { use } from 'react'
 import {Route,Routes,Link } from 'react-router-dom';
 import LandingPage from './pages/landingPage';
 import CanvasPage from './pages/canvasPage';
+import FinalStandings from './pages/finalStandings';
 // linewidth slider update krna hai
 // undo redo buttons and color options
 // for linewidth and color store them in drawing arr
@@ -16,6 +17,7 @@ function App() {
     <Routes>
       <Route path="/" element={<LandingPage/>} />
       <Route path='/canvas/:roomID' element={<CanvasPage></CanvasPage>}></Route>
+      <Route path='/finalStandings/:roomID' element={<FinalStandings></FinalStandings>}></Route>
     </Routes>
      </section>
     </>

@@ -1,3 +1,5 @@
+import { memo } from "react";
+import React from "react";
 function Results({gameState,playerList,round}){
     return(
     <>
@@ -52,17 +54,6 @@ function Results({gameState,playerList,round}){
                 </div>
             </div>
         )}
-
-        {gameState === "Game End" && (
-          <div className="flex flex-col items-center justify-center h-full w-full">
-            <div className="font-['Press_Start_2P'] text-violet-300 text-3xl tracking-wider">
-            GAME OVER
-            </div>
-            <div className="font-['Press_Start_2P'] mt-8 text-white text-lg font-semibold">
-            Final Results
-            </div>
-        </div>
-        )}
     </>
 )}
-export default Results;
+export default React.memo(Results);

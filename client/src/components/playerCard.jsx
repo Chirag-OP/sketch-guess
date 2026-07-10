@@ -1,3 +1,5 @@
+import { memo } from "react";
+import React from "react";
 function PlayerCard({name,score,isHost,isDrawing}){
     return(
         <>
@@ -12,4 +14,4 @@ function PlayerCard({name,score,isHost,isDrawing}){
         </>
     )
 }
-export default PlayerCard;
+export default React.memo(PlayerCard);

@@ -334,7 +334,11 @@ io.on("connection",(socket)=>{
         if(currState==="Playing") socket.emit("drawing",drawingMap.get(roomID) ?? []);
     })
     socket.on('round_info', ({roomID,rounds,drawTime,players,gameState})=>{
-        roundInfoMap.set(roomID,new RoundInfo(rounds,drawTime,players,gameState));
+        roundInfoMap.set(roomID,new RoundInfo(
+            Number(rounds),
+            Number(drawTime),
+            Number(players),
+            gameState));
     })
     socket.on('round_info_req',(arg)=>{
         socket.emit('update_round_info', roundInfoMap.get(arg));
@@ -367,5 +371,24 @@ io.on("connection",(socket)=>{
 })
 app.get('/api', (req,res)=>{
     res.send("hello")
+})
+app.get("/final_results/:roomID",(req,res)=>{
+    try{
+        const roomID = req.params.roomID;
+        if(!scoreTable.has(roomID)){
+            return res.status(404).json({
+                error:'Room Not Found'
+            })
+        }
+        const players = Array.from(scoreTable.get(roomID).values());
+        players.sort((a,b)=>{
+            return b.score-a.score;
+        })
+        res.json(players);
+    }catch(err){
+        res.status(500).json({
+           error: 'Internal Server Error'
+    });
+    }
 })
 server.listen(3000);

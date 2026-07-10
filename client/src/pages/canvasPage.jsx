@@ -80,6 +80,9 @@ function CanvasPage(){
       else if(arg.gameState==="Playing" || arg.gameState==="Show Results"){
         socketRef.current.emit('req_word_to_display',{roomID,playerID});
       }
+      else if(arg.gameState==="Game End"){
+        navigate(`/finalStandings/${roomID}`);
+      }
     })
     socketRef.current.on('word_to_display',(arg)=>{
       setChosenWord(arg);
