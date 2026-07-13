@@ -2,10 +2,12 @@ import express from 'express'
 import cors from 'cors'
 import { Server } from "socket.io";
 import {createServer} from 'http';
+import { clearTimeout } from 'timers';
 const app = express();
 app.use(cors());
 app.use(express.json());
 // if servre give error on get(playerID) just redirect the player to landing page
+// now when everyone goes to results page they can see results only for 30 secs => after gameEnd store results in another structure
 const server= createServer(app)
 const io = new Server(server,{
     cors:{
@@ -68,6 +70,13 @@ class wordToDisplay{
     constructor(word, encoding){
         this.word = word;
         this.encoding = encoding;
+    }
+}
+class Reconnection{
+    constructor(roomID,timer,timerId=null){
+        this.roomID = roomID;
+        this.timer = timer;
+        this.timerId = null;
     }
 }
 function chooseDrawer(roomID) {
@@ -248,12 +257,45 @@ function addScore(roomID){
         player.currTurnScore=0;
     }
 }
+function clearRoom(roomID){
+    if(scoreTable.has(roomID)) scoreTable.delete(roomID);
+    if(roundInfoMap.has(roomID)) roundInfoMap.delete(roomID);
+    if(gameEleMap.has(roomID)) gameEleMap.delete(roomID);
+    if(chosen_word.has(roomID)) chosen_word.delete(roomID);
+    if(iterArr.has(roomID)) iterArr.delete(roomID);
+    if(drawingMap.has(roomID)) drawingMap.delete(roomID);
+}
+function startRecTimer(playerID,roomID){
+    const e = reConnectionMap.get(playerID);
+    if(!e) return;
+    if (e.timerId) clearTimeout(e.timerId);
+    e.timerId = setTimeout(()=>{
+        reConnectionMap.delete(playerID);
+        const room = scoreTable.get(roomID);
+        if(room && room.has(playerID)){
+            room.delete(playerID);
+            const noOfPlayers = room.size;
+            if(noOfPlayers===0){
+                clearRoom(roomID);
+                return;
+            }
+            else if(noOfPlayers===1){
+                const round = roundInfoMap.get(roomID);
+                if(round && round.gameState!=="Not Started"){
+                    // write game pause logic here
+                }
+            }
+            sendUpdatedPlayerData(roomID);
+        }
+    },30000)
+}
 const scoreTable = new Map();
 const roundInfoMap = new Map();
 const gameEleMap = new Map();
 const chosen_word = new Map();
 const iterArr=new Map();
 const drawingMap = new Map();
+const reConnectionMap = new Map();
 io.on("connection",(socket)=>{
     socket.on("create_room",({playerID,roomID,userName,isHost,isDrawing,score,hasGuessed,joinTime})=>{
         iterArr.set(roomID,0);
@@ -291,6 +333,11 @@ io.on("connection",(socket)=>{
         if(player.socketID){ 
             // io.sockets.sockets is a map Socket.io maintains internally of all 
             // currently connected sockets, keyed by their ID
+            const rec = reConnectionMap.get(playerID);
+            if(rec){
+                clearTimeout(rec.timerId);
+                reConnectionMap.delete(playerID);
+            }
             const oldSocket = io.sockets.sockets.get(player.socketID); 
             // makes the socketID string into a socket object since leaving 
             // requires socket object itself
@@ -368,6 +415,20 @@ io.on("connection",(socket)=>{
         if (!words) return;
         socket.emit('your_turn', words);
     })
+    socket.on('disconnect',()=>{
+        if(!socket.data.roomID) return;
+        const roomID = socket.data.roomID;
+        const playerID = socket.data.playerID;
+        if(!reConnectionMap.has(playerID)){
+            reConnectionMap.set(playerID, new Reconnection(roomID,30));
+            startRecTimer(playerID,roomID);
+        }
+        else{
+            clearTimeout(reConnectionMap.get(playerID).timerId);
+            reConnectionMap.get(playerID).timer = 30;
+            startRecTimer(playerID,roomID);
+        }
+    })
 })
 app.get('/api', (req,res)=>{
     res.send("hello")
@@ -391,4 +452,8 @@ app.get("/final_results/:roomID",(req,res)=>{
     });
     }
 })
+// app.get("/del_room/:roomID",(req,res)=>{
+//     // left implementation here
+//     res.status(200).json({ success: true });
+// })
 server.listen(3000);

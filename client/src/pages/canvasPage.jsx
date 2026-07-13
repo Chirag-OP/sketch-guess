@@ -11,6 +11,7 @@ import Results from '../components/results';
 // add style on button hover
 // add animation on waiting for Players section
 // redirect players using joinLink to landing page with joinCode autoFilled
+// add message displaying player disconnected
 
 function CanvasPage(){
   const [mess, setMess] = useState('');
