@@ -169,6 +169,13 @@ function CanvasPage(){
                 <div></div>
               </>
               )}
+              {gameState==="Paused" && (
+              <>
+                <div></div>
+                <div className="font-['Press_Start_2P'] text-gray-300 text-2xl p-2 mt-4"> Game Paused, waiting</div>
+                <div></div>
+              </>
+              )}
             {socketRef.current && gameState==="Playing" &&  <Canvas socket={socketRef.current} tool={tool} isDrawer={isDrawing} lineWidth={lineWidthRef.current}></Canvas>}
             <Results gameState={gameState} round={round} playerList={playerList}></Results>
           </div>

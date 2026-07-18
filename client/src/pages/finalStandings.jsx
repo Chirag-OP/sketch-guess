@@ -35,6 +35,7 @@ function FinalStandings(){
         }).then((data)=>{
             setPlayerList(data);
         }).catch((err)=>{
+            if(err.status===404) navigate('/');
             console.error(err)
         })
     },[roomID])

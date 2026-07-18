@@ -8,6 +8,9 @@ app.use(cors());
 app.use(express.json());
 // if servre give error on get(playerID) just redirect the player to landing page
 // now when everyone goes to results page they can see results only for 30 secs => after gameEnd store results in another structure
+
+// current code has race condion in 30sec and 10sec rec timer
+// what about when drawer disconnects
 const server= createServer(app)
 const io = new Server(server,{
     cors:{
@@ -55,6 +58,8 @@ class RoundInfo{
         this.drawTime = drawTime;
         this.maxPlayers = maxPlayers;
         this.gameState = gameState;
+
+        this.pausedFrom = null;
     }
 }
 class GameEvents{
@@ -282,12 +287,14 @@ function startRecTimer(playerID,roomID){
             else if(noOfPlayers===1){
                 const round = roundInfoMap.get(roomID);
                 if(round && round.gameState!=="Not Started"){
-                    // write game pause logic here
+                    io.to(roomID).emit("redirect","");
+                    clearRoom(roomID);
+                    return;
                 }
             }
             sendUpdatedPlayerData(roomID);
         }
-    },30000)
+    },1000*e.timer)
 }
 const scoreTable = new Map();
 const roundInfoMap = new Map();
@@ -330,6 +337,8 @@ io.on("connection",(socket)=>{
         socket.join(roomID);
         socket.data.roomID = roomID;
         socket.data.playerID = playerID;
+        const round = roundInfoMap.get(roomID);
+        const game = gameEleMap.get(roomID);
         if(player.socketID){ 
             // io.sockets.sockets is a map Socket.io maintains internally of all 
             // currently connected sockets, keyed by their ID
@@ -338,6 +347,7 @@ io.on("connection",(socket)=>{
                 clearTimeout(rec.timerId);
                 reConnectionMap.delete(playerID);
             }
+            
             const oldSocket = io.sockets.sockets.get(player.socketID); 
             // makes the socketID string into a socket object since leaving 
             // requires socket object itself
@@ -347,6 +357,22 @@ io.on("connection",(socket)=>{
             }
         }
         player.socketID = socket.id;
+        if(round.pausedFrom!==null){
+            let activePlayers = 0;
+            const room = scoreTable.get(roomID);
+            for (const id of room.keys()) {
+                if (!reConnectionMap.has(id)) {
+                    activePlayers++;
+                }
+            }
+            if (activePlayers >= 2) {
+                round.gameState = round.pausedFrom;
+                round.pausedFrom = null;
+                if (game?.timerId) clearInterval(game.timerId);
+                startTimer(roomID);
+                io.to(roomID).emit('update_round_info',round);
+            }
+        }
         sendUpdatedPlayerData(roomID);
     })
     socket.on("chat",({mess,userName,playerID})=>{
@@ -419,15 +445,38 @@ io.on("connection",(socket)=>{
         if(!socket.data.roomID) return;
         const roomID = socket.data.roomID;
         const playerID = socket.data.playerID;
+        const room = scoreTable.get(roomID)
+        const round = roundInfoMap.get(roomID);
         if(!reConnectionMap.has(playerID)){
             reConnectionMap.set(playerID, new Reconnection(roomID,30));
-            startRecTimer(playerID,roomID);
         }
         else{
             clearTimeout(reConnectionMap.get(playerID).timerId);
             reConnectionMap.get(playerID).timer = 30;
-            startRecTimer(playerID,roomID);
         }
+        if(!room) return;
+        let activePlayers = 0;
+        for(const id of room.keys()){ 
+            if(!reConnectionMap.has(id)){
+                activePlayers++;
+            }
+        }
+        if(activePlayers===1){
+            const room = roundInfoMap.get(roomID);
+            if(room){ 
+                const lastState = room.gameState;
+                const game = gameEleMap.get(roomID);
+                const time = game?.timer;
+                const timerId = game?.timerId; 
+                if(timerId) clearInterval(timerId); 
+                room.gameState="Paused"; 
+                round.pausedFrom=lastState;
+                game.timer = time;
+                io.to(roomID).emit('update_round_info', roundInfoMap.get(roomID)); 
+                reConnectionMap.get(playerID).timer = 10;
+            } //pause game
+        }
+        startRecTimer(playerID,roomID);
     })
 })
 app.get('/api', (req,res)=>{
