@@ -27,13 +27,15 @@ A real-time collaborative drawing application that allows multiple users to draw
 - correct guess logic and displaying guessed correctly
 - auto next turn on timer end
 - update player points logic
+- round end logic
+- auto round end on timer end
+- player disconnection handling
+- auto room deletion 
+- colors and brush size
 
 ## Planned
 - undo redo buttons
-- colors and brush size
-- guarented delivery from server to client using database
-- round end logic
-- auto round end on timer end
+- update game scoring logic for drawer
 - like unlike drawing option
 - room host can kick or accept players
 - shop logic to cast buff debuff
@@ -58,6 +60,27 @@ significantly. Since each digit can be hexadecimal i.e 0-9 or a-f i.e 16 values
 **Problem:** But this give rise to another Problem of overWriting player details if that same player rejoins from same browser using different name. Also to prevent this if i tend to store username in url parameter then link won't be shareable
 
 **Decision:** Using Session Storage to store the playerID for that session only hence preventing overwriting on new tab and still playerID persists on tab reload
+
+### Grace Period before player removal
+**Initial approach:** Remove a player immediately when their socket disconnects.
+
+**Problem:** Temporary network issues, browser refreshes, or accidental tab closures would permanently remove the player from the room, causing them to lose their game state and score even if they reconnected within a few seconds.
+
+**Decision:** Introduced a 30-second grace period before removing a disconnected player. If the player reconnects within this window, they resume the game with the same player ID and score. Only after the timeout expires is the player permanently removed from the room.
+
+### Automatic room Cleanup
+**Initial approach:** Keep the room alive untill all rounds are completed.
+
+**Problem:** Room continues on server even when all players have left the room hence consuming server memory.
+
+**Decision:** As soon as the last player leaves a room, the room is automatically deleted from the server. Any subsequent attempt to access the room returns a 404, allowing the frontend to redirect users back to the home page instead of showing an invalid game state.
+
+### Handling Single Player State
+**Initial approach:** Continue the game even if single player left.
+
+**Problem:** Game would have kept progressing to next rounds, since server sees no player is left to take a guess untill someone joins.
+
+**Decision:** When only one player remains, the game enters a paused state for 10 seconds. If another player joins or someone rejoins during this period, the game resumes normally. Otherwise, the room is automatically deleted since meaningful gameplay is no longer possible and the last remaining player is guided to home page.
 
 ### Global Socket
 **Initial approach:** using a global socket for all the pages of app

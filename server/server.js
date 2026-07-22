@@ -7,10 +7,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 // if servre give error on get(playerID) just redirect the player to landing page
+// if host leaves make someone new host
 // now when everyone goes to results page they can see results only for 30 secs => after gameEnd store results in another structure
 
 // current code has race condion in 30sec and 10sec rec timer
-// what about when drawer disconnects
+// what about when drawer disconnects -> nothing game just continues
 const server= createServer(app)
 const io = new Server(server,{
     cors:{
@@ -319,7 +320,14 @@ io.on("connection",(socket)=>{
             const maxPlayers = roundInfoMap.get(roomID).maxPlayers;
             if(currSize==maxPlayers) socket.emit('add_player',"Room is full");
             else{
-                scoreTable.get(roomID).set(playerID , new PlayerData(userName,score,isHost,isDrawing,joinTime,hasGuessed));
+                const sid = socket.id;
+                const room = scoreTable.get(roomID);
+                const alreadyJoined = [...room.values()].some(player => player.socketID === socket.id);
+                if (alreadyJoined) {
+                    socket.emit("add_player", "Already joined");
+                    return;
+                }
+                scoreTable.get(roomID).set(playerID , new PlayerData(userName,score,isHost,isDrawing,joinTime,hasGuessed,sid));
                 socket.emit('add_player',"success");
             }
         }

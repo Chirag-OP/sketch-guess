@@ -16,7 +16,9 @@ import Results from '../components/results';
 function CanvasPage(){
   const [mess, setMess] = useState('');
   const [tool,setTool] = useState('');
-  const lineWidthRef=useRef('5');
+  const [lineWidth, setLineWidth] = useState(2);
+  const [strokeColor, setStrokeColor] = useState("#000000");
+  const [fillColor, setFillColor] = useState("transparent");
 
   const socketRef = useRef(null);
   const location = useLocation();
@@ -132,7 +134,13 @@ function CanvasPage(){
       <div className="bg-[#1a1a2e] flex text-3xl p-4 border-b border-violet-600 justify-between">
         <div className="text-orange-500 font-['Press_Start_2P'] flex flex-1"><div className="font-['Press_Start_2P'] text-violet-600">Sketch</div>Guess</div>
         <div className='flex-1 justify-center flex text-gray-200 tracking-widest'>{chosenWord}</div>
-        <div className='flex-1 text-gray-200 flex justify-end'>{timer}</div>
+        <div className="flex-1 flex justify-end items-center gap-8 text-gray-200">
+          <button className="text-lg hover:text-violet-400 transition "
+            onClick={() => navigator.clipboard.writeText(roomID)}
+            title="Copy Room Code"
+          >Room Code: {roomID} </button>
+          <div>{timer}</div>
+        </div>
       </div>
 
       <div className='pt-4'>
@@ -176,7 +184,7 @@ function CanvasPage(){
                 <div></div>
               </>
               )}
-            {socketRef.current && gameState==="Playing" &&  <Canvas socket={socketRef.current} tool={tool} isDrawer={isDrawing} lineWidth={lineWidthRef.current}></Canvas>}
+            {socketRef.current && gameState==="Playing" &&  <Canvas socket={socketRef.current} tool={tool} isDrawer={isDrawing} lineWidth={lineWidth} fillColor={fillColor} strokeColor={strokeColor}></Canvas>}
             <Results gameState={gameState} round={round} playerList={playerList}></Results>
           </div>
 
@@ -205,7 +213,10 @@ function CanvasPage(){
           </div>
         </div>
       </div>
-      {gameState==="Playing" && isDrawing && <ToolBar setTool={setTool} lineWidth={lineWidthRef.current}></ToolBar>}
+      {gameState==="Playing" && isDrawing && <ToolBar tool={tool} setTool={setTool} lineWidth={lineWidth} setLineWidth={setLineWidth} 
+          strokeColor={strokeColor} setStrokeColor={setStrokeColor}  
+          fillColor = {fillColor} setFillColor = {setFillColor}
+        ></ToolBar>}
     </div>
   )}
 export default CanvasPage;

@@ -16,16 +16,17 @@ function LandingPage(){
     const navigate=useNavigate();
     const location= useLocation();
 
-    const [joining,setJoining]= useState(false);
+    const joiningRef= useRef(false);
     const socketRef = useRef(null);
     const gameState = 'Not Started';
+
     function handleRoomCreate(){
-        if(joining) return;
-        if(userName.length==0){
+        if(joiningRef.current) return;
+        if(userName.length===0){
             alert('Invalid Username');
             return;
         }
-        setJoining(true);
+        joiningRef.current = true;
         let roomID;
         roomID = nanoid(8);
         roomID = roomID.toUpperCase();
@@ -42,11 +43,13 @@ function LandingPage(){
         setTimeout(() => {
             console.log('Creating...');
             navigate(`/canvas/${roomID}`);
-            setJoining(false);
+            joiningRef.current = false;
         }, 1000);
     }
     function handleJoinRoom(){
-        if(joining) return;
+        if(joiningRef.current) return;
+        const p = sessionStorage.getItem(joinCode);
+        if(p) return;
         if(userName.length==0){
             alert('Invalid Username');
             return;
@@ -55,7 +58,7 @@ function LandingPage(){
             alert('Invalid Room Code');
             return;
         }
-        setJoining(true);
+        joiningRef.current = true;
         socketRef.current.once('add_player',(arg)=>{
             clearTimeout(timeout);
             if(arg==="success"){
@@ -66,7 +69,7 @@ function LandingPage(){
                 }, 500);
             }
             else alert(arg);
-            setJoining(false);
+            joiningRef.current = false;
         })
         const playerID = crypto.randomUUID();
         socketRef.current.emit('add_player',{playerID,roomID:joinCode,userName,
@@ -77,7 +80,8 @@ function LandingPage(){
             joinTime:Date.now()
         });
         const timeout = setTimeout(() => {
-            setJoining(false);
+            socketRef.current.off("add_player");
+            joiningRef.current = false;
             alert("Server did not respond.");
         }, 5000);
     }
@@ -114,7 +118,7 @@ function LandingPage(){
                         <div className="flex flex-col gap-2">
                             <div>
                                 <div className="text-gray-400 text-xs">PLAYERS *</div>
-                                <select value={players} onChange={(e)=>setPlayers(e.target.value)} className="bg-gray-600 rounded-lg w-56 text-gray-200">
+                                <select value={players} onChange={(e)=>setPlayers(Number(e.target.value))} className="bg-gray-600 rounded-lg w-56 text-gray-200">
                                 <option value="2">2 Players</option>
                                 <option value="3">3 Players</option>
                                 <option value="4">4 Players</option>
@@ -128,7 +132,7 @@ function LandingPage(){
                         </div>
                         <div>
                             <div className="text-gray-400 text-xs">DRAW TIME *</div>
-                            <select value={drawTime} onChange={(e)=>setDrawTime(e.target.value)} className="bg-gray-600 rounded-lg w-56 text-gray-200">
+                            <select value={drawTime} onChange={(e)=>setDrawTime(Number(e.target.value))} className="bg-gray-600 rounded-lg w-56 text-gray-200">
                                 <option value="20">20 sec</option>
                                 <option value="30">30 sec</option>
                                 <option value="40">40 sec</option>
@@ -141,7 +145,7 @@ function LandingPage(){
                         </div>
                         <div>
                             <div className="text-gray-400 text-xs">ROUNDS *</div>
-                            <select value={rounds} onChange={(e)=>setRounds(e.target.value)} className="bg-gray-600 rounded-lg w-56 text-gray-200">
+                            <select value={rounds} onChange={(e)=>setRounds(Number(e.target.value))} className="bg-gray-600 rounded-lg w-56 text-gray-200">
                                 <option value="1">1 rounds</option>
                                 <option value="2">2 rounds</option>
                                 <option value="3">3 rounds</option>

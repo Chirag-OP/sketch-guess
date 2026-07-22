@@ -11,16 +11,6 @@ function FinalStandings(){
         return;
     }
     function handleRoomLeave(){
-        // if(leaving) return;
-        // setLeaving(true);
-        // fetch(`/del_room/${roomID}`)
-        // .then((response)=>{
-        //     if(!response.ok) throw new Error('Something Failed')
-        // }).catch((err)=>{
-        //     console.error(err);
-        // }).finally(()=>{
-        //     navigate('/')
-        // })
         navigate('/');
     }
     useEffect(()=>{
@@ -28,14 +18,16 @@ function FinalStandings(){
         .then((response)=>{
             return response.json().then((data)=>{
                 if(!response.ok){
-                throw new Error(data.error || 'Request Failed');
+                const err = new Error(data.error || 'Request Failed');
+                err.status = response.status;
+                throw err;
                 }
                 return data;
             })
         }).then((data)=>{
             setPlayerList(data);
         }).catch((err)=>{
-            if(err.status===404) navigate('/');
+            if(err.status===404) navigate('/' ,{ replace: true });
             console.error(err)
         })
     },[roomID])
@@ -94,10 +86,10 @@ function FinalStandings(){
 
                     <section>
                         <div className="flex gap-2 font-['Press_Start_2P']">
-                            <button className="flex-1 border border-white rounded-lg text-white w-full p-4 m-1 bg-violet-900 hover:scale-105 
-                            hover:border-violet-900 hover:cursor-pointer" onClick={handlePlayAgain}>Play Again</button>
-                            <button className="flex-1 border border-white rounded-lg text-white w-full p-4 m-1 bg-red-900 hover:scale-105
-                             hover:border-red-900 hover:cursor-pointer" onClick={handleRoomLeave}>Leave Room</button>
+                            {/* <button className="flex-1 border border-white rounded-lg text-white w-full p-4 m-1 bg-red-900 hover:scale-105 
+                            hover:border-violet-900 hover:cursor-pointer" onClick={handlePlayAgain}>Play Again</button> */}
+                            <button className="flex-1 border border-white rounded-lg text-white w-full p-4 m-1 bg-violet-900 hover:scale-105
+                             hover:border-red-900 hover:cursor-pointer" onClick={handleRoomLeave}>Home</button>
                         </div>
                     </section>
                     

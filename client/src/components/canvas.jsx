@@ -3,7 +3,7 @@ import { io } from "socket.io-client";
 import ToolBar from './toolBox';
 import { useLocation, useParams } from 'react-router-dom';
 
-function Canvas({socket,tool,isDrawer,lineWidth}){
+function Canvas({socket,tool,isDrawer,lineWidth,fillColor,strokeColor}){
   const socketRef = useRef(null);
   const xRef=useRef(null);
   const yRef=useRef(null);
@@ -13,6 +13,10 @@ function Canvas({socket,tool,isDrawer,lineWidth}){
   const canvasContRef=useRef(null);
   const drawingArr = useRef([]);
   const redrawRef=useRef('');
+
+  const lineWidthRef = useRef(lineWidth);
+  const fillColorRef = useRef(fillColor);
+  const strokeColorRef = useRef(strokeColor);
   useEffect(() => {
     socketRef.current = socket;
     const canvas=canvasRef.current;
@@ -24,25 +28,39 @@ function Canvas({socket,tool,isDrawer,lineWidth}){
     socketRef.current.emit('req_drawing',"");
     const redraw=()=>{
       ctx.strokeStyle='black';
-      ctx.clearRect(0,0,1000,500);
+      ctx.clearRect(0,0,canvasRef.current.width, canvasRef.current.height);
       for(const d of drawingArr.current){
         const type = d.tool;
+        const w = d.lineWidth;
+        ctx.lineWidth = w;
         if(type==='pencil'){
+          ctx.strokeStyle= d.strokeColor;
           ctx.beginPath();
           ctx.moveTo(d.startX, d.startY);
           ctx.lineTo(d.finishX,d.finishY);
           ctx.stroke();
         }
         else if(type==='rectangle'){
-          ctx.strokeRect(d.startX,d.startY,d.finishX-d.startX,d.finishY-d.startY);
+          const fillColor = d.fillColor;
+          ctx.strokeStyle= d.strokeColor;
+          ctx.fillStyle = fillColor;
+          ctx.beginPath();
+          ctx.rect(d.startX,d.startY,d.finishX-d.startX,d.finishY-d.startY);
+          if (fillColor && fillColor !== "transparent") ctx.fill();
+          ctx.stroke();
         }
         else if(type==='circle'){
+          const fillColor = d.fillColor;
+          ctx.strokeStyle= d.strokeColor;
+          ctx.fillStyle = fillColor;
           const radius=Math.sqrt((d.finishX-d.startX)**2+(d.finishY-d.startY)**2);
           ctx.beginPath();
           ctx.arc(d.startX,d.startY,radius,0,Math.PI*2,true);
+          if (fillColor && fillColor !== "transparent") ctx.fill();
           ctx.stroke();
         }
         else if(type==='line'){
+          ctx.strokeStyle= d.strokeColor;
           ctx.beginPath();
           ctx.moveTo(d.startX, d.startY);
           ctx.lineTo(d.finishX,d.finishY);
@@ -54,9 +72,11 @@ function Canvas({socket,tool,isDrawer,lineWidth}){
           ctx.moveTo(d.startX, d.startY);
           ctx.lineTo(d.finishX,d.finishY);
           ctx.stroke();
-          ctx.strokeStyle='black';
         }
       }
+      ctx.lineWidth = lineWidthRef.current;
+      ctx.strokeStyle = strokeColorRef.current;
+      ctx.fillStyle = fillColorRef.current;
     }
 
     redrawRef.current=redraw;
@@ -69,6 +89,10 @@ function Canvas({socket,tool,isDrawer,lineWidth}){
       canvas.style.width=`${w}px`;
       canvas.style.height=`${500}px`;
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      ctx.lineWidth = lineWidthRef.current;
+      ctx.strokeStyle=strokeColorRef.current;
+      ctx.fillStyle = fillColorRef.current;
+      ctx.lineCap = "round";
       redraw();
     }
     resizeCanvas();
@@ -76,16 +100,26 @@ function Canvas({socket,tool,isDrawer,lineWidth}){
       resizeCanvas();
     });
     observer.observe(canvasContRef.current);
-    ctx.lineWidth=lineWidth;
     ctx.lineCap="round";
     ctxRef.current=ctx;
     return () => {
     observer.disconnect();
   }
   }, [])
+  useEffect(()=>{
+    lineWidthRef.current = lineWidth;
+      ctxRef.current.lineWidth=lineWidth;
+  },[lineWidth])
+
+  useEffect(()=>{
+    strokeColorRef.current = strokeColor;
+    fillColorRef.current = fillColor;
+    ctxRef.current.strokeStyle = strokeColor;
+    ctxRef.current.fillStyle = fillColor;
+  },[strokeColor,fillColor])
   useEffect(() => {
   if(tool!=="clear_all") return;
-  ctxRef.current?.clearRect(0, 0, 1000, 500);
+  ctxRef.current?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
   drawingArr.current = [];
   if(isDrawer) {
     socketRef.current?.emit("drawing", []);
@@ -116,7 +150,10 @@ function Canvas({socket,tool,isDrawer,lineWidth}){
         startX:xRef.current,
         startY:yRef.current,
         finishX:offsetX,
-        finishY:offsetY
+        finishY:offsetY,
+        lineWidth:lineWidth,
+        fillColor:fillColor,
+        strokeColor: strokeColor
       });
     }
     else if(tool && tool==='circle'){
@@ -125,7 +162,10 @@ function Canvas({socket,tool,isDrawer,lineWidth}){
         startX:xRef.current,
         startY:yRef.current,
         finishX:offsetX,
-        finishY:offsetY
+        finishY:offsetY,
+        lineWidth:lineWidth,
+        fillColor:fillColor,
+        strokeColor: strokeColor
       });
     }
     else if(tool && tool==='line'){
@@ -134,7 +174,9 @@ function Canvas({socket,tool,isDrawer,lineWidth}){
         startX:xRef.current,
         startY:yRef.current,
         finishX:offsetX,
-        finishY:offsetY
+        finishY:offsetY,
+        lineWidth:lineWidth,
+        strokeColor: strokeColor
       });
     }
     if(isDrawer) socketRef.current?.emit("drawing",drawingArr.current);
@@ -152,26 +194,30 @@ function Canvas({socket,tool,isDrawer,lineWidth}){
         startX:xRef.current,
         startY:yRef.current,
         finishX:offsetX,
-        finishY:offsetY
+        finishY:offsetY,
+        lineWidth:lineWidth,
+        strokeColor: strokeColor
       });
       xRef.current=offsetX;
       yRef.current=offsetY;
     }
     else if(tool==='rectangle'){
-      ctxRef.current.clearRect(0,0,1000,500);
+      ctxRef.current.clearRect(0,0,canvasRef.current.width, canvasRef.current.height);
       redrawRef.current?.();
+      if (fillColor !== "transparent") ctxRef.current.fillRect(xRef.current,yRef.current,offsetX - xRef.current,offsetY - yRef.current);
       ctxRef.current.strokeRect(xRef.current, yRef.current, offsetX-xRef.current, offsetY-yRef.current);
     }
     else if(tool==='circle'){
-      ctxRef.current.clearRect(0,0,1000,500);
+      ctxRef.current.clearRect(0,0,canvasRef.current.width, canvasRef.current.height);
       redrawRef.current?.();
       let radius=Math.sqrt((offsetX-xRef.current)**2+(offsetY-yRef.current)**2);
       ctxRef.current.beginPath();
       ctxRef.current.arc(xRef.current,yRef.current,radius,0,Math.PI*2,true);
+      if (fillColor !== "transparent") ctxRef.current.fill();
       ctxRef.current.stroke();
     }
     else if(tool==='line'){
-        ctxRef.current.clearRect(0,0,1000,500);
+        ctxRef.current.clearRect(0,0,canvasRef.current.width, canvasRef.current.height);
         redrawRef.current?.();
         ctxRef.current.beginPath();
         ctxRef.current.moveTo(xRef.current,yRef.current);
@@ -186,7 +232,8 @@ function Canvas({socket,tool,isDrawer,lineWidth}){
             startX:xRef.current,
             startY:yRef.current,
             finishX:offsetX,
-            finishY:offsetY
+            finishY:offsetY,
+            lineWidth:lineWidth
         });
         xRef.current=offsetX;
         yRef.current=offsetY;
