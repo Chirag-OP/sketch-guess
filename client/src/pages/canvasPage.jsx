@@ -47,17 +47,14 @@ function CanvasPage(){
   useEffect(() => {
     socketRef.current = io('http://localhost:3000');
     socketRef.current.once('redirect',(arg)=>{
-      console.log(arg);
       navigate('/',{
         state:{
           roomID:arg,
         },
       })
-      console.log("naivagetd: ", {roomID:arg});
       return;
     })
     socketRef.current.on("player_list",(arg)=>{
-      console.log(arg);
       const pMap = new Map(arg);
       setPlayerList(pMap);
       const playerData = pMap.get(playerID);
@@ -75,8 +72,6 @@ function CanvasPage(){
       setGameState(arg.gameState);
       drawTimeRef.current = arg.drawTime;
       maxPlayersRef.current = arg.maxPlayers;
-      console.log("RECEIVED", arg);
-      console.log(arg);
       if(arg.gameState==="Choosing"){
         socketRef.current.emit('req_game_elements',{roomID,playerID});
       }

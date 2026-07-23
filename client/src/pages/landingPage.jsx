@@ -92,9 +92,7 @@ function LandingPage(){
     };
 }, []);
     useEffect(()=>{
-        console.log(location.state);
         if(location.state?.roomID){
-            console.log(location.state?.roomID)
             setJoinCode(location.state.roomID);
         }
     },[location.state])

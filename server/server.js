@@ -3,13 +3,12 @@ import cors from 'cors'
 import { Server } from "socket.io";
 import {createServer} from 'http';
 import { clearTimeout } from 'timers';
+import words from './data/words.js';
 const app = express();
 app.use(cors());
 app.use(express.json());
 // if servre give error on get(playerID) just redirect the player to landing page
 // if host leaves make someone new host
-// now when everyone goes to results page they can see results only for 30 secs => after gameEnd store results in another structure
-
 // current code has race condion in 30sec and 10sec rec timer
 // what about when drawer disconnects -> nothing game just continues
 const server= createServer(app)
@@ -19,28 +18,6 @@ const io = new Server(server,{
         methods: ['GET','POST']
     }
 })
-const words = [
-  "Apple",
-  "House",
-  "Car",
-  "Tree",
-  "Bicycle",
-  "Cat",
-  "Dog",
-  "Book",
-  "Chair",
-  "Pizza",
-  "Airplane",
-  "Mountain",
-  "Sunflower",
-  "Guitar",
-  "Rocket",
-  "Castle",
-  "Umbrella",
-  "Dinosaur",
-  "Treasure",
-  "Robot"
-];
 class PlayerData{
     constructor(userName,score,isHost,isDrawing,joinTime,hasGuessed,socketID=''){
         this.userName=userName;
@@ -159,8 +136,6 @@ function updateGameState(roomID){
     const arg=roomID
     if(currState==="Not Started" || currState==="Next Turn"){
         const w= choose3Words();
-        console.log(w);
-        console.log(iterArr);
         const [drawer, roundChange] = chooseDrawer(arg);
         if(roundChange){
             const currRound = roundInfoMap.get(arg).roundNo;
@@ -180,8 +155,6 @@ function updateGameState(roomID){
         roundInfoMap.get(arg).gameState = "Choosing";
         scoreTable.get(arg).get(drawer).isDrawing = true;
         sendUpdatedPlayerData(roomID);
-        console.log("after");
-        console.log(iterArr);
         io.to(arg).emit('update_round_info',roundInfoMap.get(arg));
         io.to(scoreTable.get(arg).get(drawer).socketID).emit('your_turn',w);
         if(!gameEleMap.has(arg)) gameEleMap.set(arg,new GameEvents(w,drawer,15));
@@ -199,8 +172,6 @@ function updateGameState(roomID){
         io.to(arg).emit('update_round_info',roundInfoMap.get(arg));
     }
     else if(currState==="Playing"){
-        addCurrTurnScore(roomID,"drawer");
-        sendUpdatedPlayerData(roomID);
         roundInfoMap.get(arg).gameState = "Show Results";
         drawingMap.set(roomID,[]);
         const word = "waiting";
@@ -208,7 +179,6 @@ function updateGameState(roomID){
         if(w){
             w.word = word;
             w.encoding = word;
-            console.log(w.word);
         }
         io.to(arg).emit('word_to_display',word);
         io.to(arg).emit('update_round_info',roundInfoMap.get(arg));
@@ -238,14 +208,6 @@ function addCurrTurnScore(roomID,playerID){
     const RoundInfo = roundInfoMap.get(roomID);
     const gameEvents = gameEleMap.get(roomID);
     if(!RoundInfo || !gameEvents) return;
-    if(playerID==="drawer"){
-        playerID = gameEvents.drawer;
-        if(!playerID) return;
-        const player = scoreTable.get(roomID)?.get(playerID);
-        if(!player) return;
-        player.currTurnScore+=(50*gameEvents.correctGuesses);
-        return;
-    }
     const player = scoreTable.get(roomID)?.get(playerID);
     if(!player) return;
     if(player.hasGuessed) return;
@@ -255,6 +217,12 @@ function addCurrTurnScore(roomID,playerID){
     player.hasGuessed=true;
     gameEvents.correctGuesses++;
     player.currTurnScore+= Math.floor(50 * (maxPlayers-1) *(timeLeft/drawTime));
+    const drawer = gameEvents.drawer;
+    if(drawer){
+        const drawingPlayer = scoreTable.get(roomID)?.get(drawer);
+        if(!drawingPlayer) return;
+        drawingPlayer.currTurnScore+=Math.floor(50*(timeLeft/drawTime));
+    }
 }
 function addScore(roomID){
     const room = scoreTable.get(roomID);
@@ -509,8 +477,4 @@ app.get("/final_results/:roomID",(req,res)=>{
     });
     }
 })
-// app.get("/del_room/:roomID",(req,res)=>{
-//     // left implementation here
-//     res.status(200).json({ success: true });
-// })
 server.listen(3000);

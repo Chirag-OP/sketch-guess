@@ -1,9 +1,37 @@
 # Sketch Guess
-A real-time collaborative drawing application that allows multiple users to draw together on a shared canvas.
+A real-time multiplayer drawing and guessing game inspired by Skribbl.io
 
+## Screenshots
+
+### Landing Page
+<p align="center">
+  <img src="./screenshots/landingPage.png" width="85%">
+</p>
+
+### Gameplay
+<p align="center">
+  <img src="./screenshots/gamePage.png" width="85%">
+</p>
+
+### Final Results
+<p align="center">
+  <img src="./screenshots/finalResultsPage.png" width="85%">
+</p>
 ## Status
 
-🔨 Currently Building
+**Version 1 Complete**
+
+The core gameplay is fully functional. Future updates will focus on additional gameplay features and improvements.
+
+## Gameplay
+1. Create or join a room.
+2. Host starts the game.
+3. One player becomes the drawer.
+4. Drawer selects one of three words.
+5. Other players guess through chat.
+6. Correct guesses earn time-based points.
+7. After every turn, scores are shown.
+8. Highest score after all rounds wins.
 
 ## Tech Stack
 
@@ -20,7 +48,7 @@ A real-time collaborative drawing application that allows multiple users to draw
 - Canvas free-hand drawing
 - basic shape tools
 - Drawing and Chat synchronization
-- rooms logic with showing joined users and chat
+- Multiplayer room creation and joining 
 - Word selection system
 - Automatic word selection on timeout
 - showing selected word to drawer and its encoding to guessers
@@ -31,11 +59,10 @@ A real-time collaborative drawing application that allows multiple users to draw
 - auto round end on timer end
 - player disconnection handling
 - auto room deletion 
-- colors and brush size
+- Brush size and color selection
 
-## Planned
+## Future Enhancements
 - undo redo buttons
-- update game scoring logic for drawer
 - like unlike drawing option
 - room host can kick or accept players
 - shop logic to cast buff debuff
