@@ -20,13 +20,12 @@ function Canvas({socket,tool,isDrawer,lineWidth,fillColor,strokeColor}){
   useEffect(() => {
     socketRef.current = socket;
     const canvas=canvasRef.current;
+    if(!canvas) return;
     const ctx=canvas.getContext('2d');
-    socketRef.current.on("drawing",(arg)=>{
-      drawingArr.current=arg;
-      redraw();
-    })
-    socketRef.current.emit('req_drawing',"");
+    ctxRef.current=ctx;
+
     const redraw=()=>{
+      if(!canvasRef.current || !ctxRef.current) return;
       ctx.strokeStyle='black';
       ctx.clearRect(0,0,canvasRef.current.width, canvasRef.current.height);
       for(const d of drawingArr.current){
@@ -79,6 +78,12 @@ function Canvas({socket,tool,isDrawer,lineWidth,fillColor,strokeColor}){
       ctx.fillStyle = fillColorRef.current;
     }
 
+    socketRef.current.on("drawing",(arg)=>{
+      drawingArr.current=arg;
+      redraw();
+    })
+    socketRef.current.emit('req_drawing',"");
+
     redrawRef.current=redraw;
     const resizeCanvas=()=>{
       if(!canvasContRef.current) return;
@@ -101,9 +106,9 @@ function Canvas({socket,tool,isDrawer,lineWidth,fillColor,strokeColor}){
     });
     observer.observe(canvasContRef.current);
     ctx.lineCap="round";
-    ctxRef.current=ctx;
     return () => {
     observer.disconnect();
+    socketRef.current?.off("drawing");
   }
   }, [])
   useEffect(()=>{

@@ -45,7 +45,7 @@ function CanvasPage(){
 
   const [timer,setTimer] = useState(0);
   useEffect(() => {
-    socketRef.current = io('http://localhost:3000');
+    socketRef.current = io(import.meta.env.VITE_BACKEND_URL);
     socketRef.current.once('redirect',(arg)=>{
       navigate('/',{
         state:{

@@ -86,7 +86,7 @@ function LandingPage(){
         }, 5000);
     }
     useEffect(() => {
-    socketRef.current = io('http://localhost:3000');
+    socketRef.current = io(import.meta.env.VITE_BACKEND_URL);
     return () => {
         socketRef.current.disconnect();
     };

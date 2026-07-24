@@ -14,7 +14,7 @@ function FinalStandings(){
         navigate('/');
     }
     useEffect(()=>{
-        fetch(`/final_results/${roomID}`)
+        fetch(`${import.meta.env.VITE_BACKEND_URL}/final_results/${roomID}`)
         .then((response)=>{
             return response.json().then((data)=>{
                 if(!response.ok){

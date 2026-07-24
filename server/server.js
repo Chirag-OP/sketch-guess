@@ -5,19 +5,25 @@ import {createServer} from 'http';
 import { clearTimeout } from 'timers';
 import words from './data/words.js';
 const app = express();
-app.use(cors());
+
+const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
+app.use(cors({
+    origin: CLIENT_URL,
+    credentials: true
+}));
 app.use(express.json());
 // if servre give error on get(playerID) just redirect the player to landing page
 // if host leaves make someone new host
 // current code has race condion in 30sec and 10sec rec timer
 // what about when drawer disconnects -> nothing game just continues
 const server= createServer(app)
-const io = new Server(server,{
-    cors:{
-        origin:"http://localhost:5173",
-        methods: ['GET','POST']
+const io = new Server(server, {
+    cors: {
+        origin: CLIENT_URL,
+        methods: ["GET", "POST"],
+        credentials: true
     }
-})
+});
 class PlayerData{
     constructor(userName,score,isHost,isDrawing,joinTime,hasGuessed,socketID=''){
         this.userName=userName;
@@ -477,4 +483,8 @@ app.get("/final_results/:roomID",(req,res)=>{
     });
     }
 })
-server.listen(3000);
+const PORT = process.env.PORT || 3000;
+
+server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
