@@ -453,7 +453,6 @@ io.on("connection",(socket)=>{
                 if(timerId) clearInterval(timerId); 
                 room.gameState="Paused"; 
                 round.pausedFrom=lastState;
-                game.timer = time;
                 io.to(roomID).emit('update_round_info', roundInfoMap.get(roomID)); 
                 reConnectionMap.get(playerID).timer = 10;
             } //pause game
