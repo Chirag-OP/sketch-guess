@@ -103,6 +103,7 @@ function LandingPage(){
                 <div className="font-['Press_Start_2P'] text-gray-300 text-2xl p-2 mt-4">Draw.    Guess.</div>
                 <div className="font-['Press_Start_2P'] text-orange-500 text-2xl p-2">Win.</div>
                 <div className="text-gray-400 items-center flex flex-col pb-4"><p>Join a room, pick up your brush, and race to guess what your friends</p><p> are drawing — all in real time.</p></div>
+                <div className="text-gray-200 items-center font-['Press_Start_2P']">"Starting server, this may take up to 30 seconds."</div>
                 <div className="flex flex-col gap-2 m-4 p-4 w-xl items-center">
                     <div className="p-1 ">
                         <div className="text-gray-400 text-xs">YOUR NAME *</div>
